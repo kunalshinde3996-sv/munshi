@@ -1,0 +1,12 @@
+@import "tailwindcss";
+
+@theme {
+  --color-ink: #1c2434;
+  --color-saffron: #d9770a;
+  --color-paper: #faf8f4;
+}
+
+body {
+  @apply bg-paper text-ink antialiased;
+  font-family: ui-sans-serif, system-ui, "Segoe UI", sans-serif;
+}
