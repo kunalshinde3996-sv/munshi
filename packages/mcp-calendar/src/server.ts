@@ -5,7 +5,6 @@ import {
 } from "@munshi/mcp-common";
 import { pathToFileURL } from "node:url";
 import { z } from "zod";
-import { GoogleCalendarBackend } from "./google.js";
 import { SandboxCalendarBackend } from "./sandbox.js";
 import type { CalendarBackend } from "./types.js";
 
@@ -47,13 +46,17 @@ export function createCalendarServer(backend: CalendarBackend): McpServer {
   return server;
 }
 
-export function backendFromEnv(): CalendarBackend {
-  return backendMode() === "google" ? new GoogleCalendarBackend() : new SandboxCalendarBackend(sandboxDir());
+export async function backendFromEnv(): Promise<CalendarBackend> {
+  if (backendMode() === "google") {
+    const { GoogleCalendarBackend } = await import("./google.js"); // googleapis is heavy; load only in google mode
+    return new GoogleCalendarBackend();
+  }
+  return new SandboxCalendarBackend(sandboxDir());
 }
 
 /** Entry point when spawned as a stdio child process. */
 export async function main() {
-  const server = createCalendarServer(backendFromEnv());
+  const server = createCalendarServer(await backendFromEnv());
   await server.connect(new StdioServerTransport());
 }
 

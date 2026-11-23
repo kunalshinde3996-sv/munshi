@@ -3,21 +3,25 @@ import { loadConfig } from "./config.js";
 import { openDb } from "./db/index.js";
 import { createAgentLlm, createLlm } from "./llm/index.js";
 import { createServices } from "./services.js";
+import { busyReason, GoogleConnection } from "./google/connection.js";
 import { McpHub } from "./mcp/hub.js";
 import { ensureUser } from "./scan.js";
 
 const config = loadConfig();
 const { db } = openDb(config.DATABASE_PATH);
 ensureUser(db);
+// Saved per-user mode decides which backend the MCP servers start with.
 const mcp = new McpHub({ sandboxDir: config.SANDBOX_STORE_DIR });
-await mcp.connect();
+const google = new GoogleConnection(config, db, mcp, GoogleConnection.providerFor(config), () => busyReason(db));
+await mcp.reconnect(google.startupHubOptions());
+mcp.onAuthProblem = (m) => { google.authProblem = m; };
 const made = createLlm(config);
 const madeAgent = createAgentLlm(config);
 const services = createServices({ config, db, mcp, ...("agent" in madeAgent ? { agent: madeAgent.agent } : { agentError: madeAgent.error }) });
 services.executor.startScheduler();
 services.runtime?.recover();
 const app = buildApp({
-  config, db, mcp, services,
+  config, db, mcp, services, google,
   ...("llm" in made ? { llm: made.llm } : { llmError: made.error }),
 });
 

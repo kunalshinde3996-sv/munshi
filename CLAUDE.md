@@ -92,6 +92,17 @@ Every tool declares: `riskTier`, `reversible`, `undoTool?`, `verifyTool?`, `sens
   the window; undo during hold = cancel. All state is in the `actions` ledger.
 - API: /api/runs, /api/runs/:id, /api/actions(+approve/reject/undo), /api/audit, /api/policies, /api/contacts.
 
+## Google (M6)
+- OAuth (googleapis), scopes: gmail.readonly, gmail.compose, gmail.modify, calendar.events. Redirect: http://localhost:8787/auth/google/callback.
+- Refresh token stored AES-256-GCM encrypted (`google/crypto.ts`, key TOKEN_ENCRYPTION_KEY). The MCP child processes receive the refresh token
+  via env at spawn (they refresh access tokens themselves). Not configured → status shows missing env vars + setup steps; sandbox unaffected.
+- `GoogleConnection` owns OAuth state (CSRF nonce), token storage, per-user mode (`users.mode`); switching restarts the MCP children
+  (`McpHub.reconnect`), is refused while runs/approvals/holds are open, and moves the trusted own-address (`users.email`).
+- Google backends: Gmail limited to last 14 days / max 30 emails; HTML body preferred (hidden-text detection); header-injection-safe MIME;
+  calendar events created with sendUpdates:none. Revoked/insufficient grant → `GOOGLE_AUTH:` tool error → 401 `google_auth` + UI reconnect banner.
+- mcp-common/mcp-gmail/mcp-calendar import googleapis only via the `/google` subpath (lazy), keeping sandbox children fast.
+- Data views are filtered by `emails.source` = current mode; real data is never labelled SANDBOX DATA.
+
 ## Seed policies
 Never auto-send email; block tainted send_email to non-allowlisted recipients;
 auto-allow calendar reminders for obligations with confidence >= 0.8.
@@ -102,7 +113,7 @@ auto-allow calendar reminders for obligations with confidence >= 0.8.
 - [x] M3 LLM adapter (Gemini + Anthropic) + Quarantined Extractor + obligations API + UI cards
 - [x] M4 Guard with unit tests (tainted recipient, R3 block, duplicate skip, policy paths)
 - [x] M5 Agent runtime + approvals + execute + verify + undo + hold window; run timeline UI
-- [ ] M6 Google OAuth + GoogleBackend (encrypted tokens)
+- [x] M6 Google OAuth + GoogleBackend (encrypted tokens)
 - [ ] M7 E2E sandbox script (scan → handle → approve → verify → undo, + injection), README + demo
 
 ## Out of scope (Phase 1)

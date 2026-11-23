@@ -10,6 +10,10 @@ import type { McpHub } from "./mcp/hub.js";
 
 export const USER_ID = "local";
 
+export function currentMode(db: Db): "sandbox" | "google" {
+  return db.select().from(schema.users).where(eq(schema.users.id, USER_ID)).get()?.mode ?? "sandbox";
+}
+
 export function ensureUser(db: Db) {
   db.insert(schema.users).values({ id: USER_ID, email: SANDBOX_USER_EMAIL, mode: "sandbox" }).onConflictDoNothing().run();
   new Guard(db, USER_ID).seedPolicies();
@@ -102,7 +106,7 @@ function recordFlags(db: Db, emailId: string, f: SecurityFlags) {
     });
 }
 
-export function listObligations(db: Db) {
+export function listObligations(db: Db, mode: "sandbox" | "google" = currentMode(db)) {
   return db
     .select({
       id: schema.obligations.id, emailId: schema.obligations.emailId, type: schema.obligations.type,
@@ -113,15 +117,16 @@ export function listObligations(db: Db) {
     })
     .from(schema.obligations)
     .innerJoin(schema.emails, eq(schema.obligations.emailId, schema.emails.id))
+    .where(eq(schema.emails.source, mode))
     .orderBy(schema.obligations.dueDate)
     .all();
 }
 
-export function listEmails(db: Db) {
+export function listEmails(db: Db, mode: "sandbox" | "google" = currentMode(db)) {
   const obCounts = new Map<string, number>();
   for (const o of db.select({ e: schema.obligations.emailId }).from(schema.obligations).all())
     obCounts.set(o.e, (obCounts.get(o.e) ?? 0) + 1);
-  return db.select().from(schema.emails).orderBy(desc(schema.emails.receivedAt)).all().map((e) => ({
+  return db.select().from(schema.emails).where(eq(schema.emails.source, mode)).orderBy(desc(schema.emails.receivedAt)).all().map((e) => ({
     id: e.id, from: e.fromAddr, subject: e.subject, receivedAt: e.receivedAt, source: e.source,
     status: e.extractionStatus, error: e.extractionError,
     obligationCount: obCounts.get(e.id) ?? 0,

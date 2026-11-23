@@ -5,7 +5,6 @@ import {
 } from "@munshi/mcp-common";
 import { pathToFileURL } from "node:url";
 import { z } from "zod";
-import { GoogleGmailBackend } from "./google.js";
 import { SandboxGmailBackend } from "./sandbox.js";
 import type { GmailBackend } from "./types.js";
 
@@ -55,13 +54,17 @@ export function createGmailServer(backend: GmailBackend): McpServer {
   return server;
 }
 
-export function backendFromEnv(): GmailBackend {
-  return backendMode() === "google" ? new GoogleGmailBackend() : new SandboxGmailBackend(sandboxDir());
+export async function backendFromEnv(): Promise<GmailBackend> {
+  if (backendMode() === "google") {
+    const { GoogleGmailBackend } = await import("./google.js"); // googleapis is heavy; load only in google mode
+    return new GoogleGmailBackend();
+  }
+  return new SandboxGmailBackend(sandboxDir());
 }
 
 /** Entry point when spawned as a stdio child process. */
 export async function main() {
-  const server = createGmailServer(backendFromEnv());
+  const server = createGmailServer(await backendFromEnv());
   await server.connect(new StdioServerTransport());
 }
 

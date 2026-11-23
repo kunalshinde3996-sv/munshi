@@ -6,6 +6,7 @@ import type { Db } from "../db/index.js";
 import { schema } from "../db/index.js";
 import type { Guard } from "../guard/guard.js";
 import type { AgentLlm, AgentMessage, ToolCall, ToolSpec } from "../llm/agent.js";
+import { currentMode } from "../scan.js";
 import { LlmError } from "../llm/types.js";
 import type { McpHub } from "../mcp/hub.js";
 import type { ActionExecutor } from "./executor.js";
@@ -263,7 +264,8 @@ export class AgentRuntime {
       dueDate: schema.obligations.dueDate, amount: schema.obligations.amount, currency: schema.obligations.currency,
       counterparty: schema.obligations.counterparty, confidence: schema.obligations.confidence,
       senderAddress: schema.emails.fromAddr,
-    }).from(schema.obligations).innerJoin(schema.emails, eq(schema.obligations.emailId, schema.emails.id)).all();
+    }).from(schema.obligations).innerJoin(schema.emails, eq(schema.obligations.emailId, schema.emails.id))
+      .where(eq(schema.emails.source, currentMode(this.o.db))).all();
     return rows;
   }
 

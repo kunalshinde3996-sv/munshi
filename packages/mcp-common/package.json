@@ -3,6 +3,15 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "exports": { ".": "./src/index.ts" },
-  "scripts": { "typecheck": "tsc --noEmit", "test": "echo \"covered by server tests\"" }
+  "exports": {
+    ".": "./src/index.ts",
+    "./google": "./src/google.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "echo \"covered by server tests\""
+  },
+  "dependencies": {
+    "googleapis": "^190.0.0"
+  }
 }

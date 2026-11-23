@@ -15,6 +15,10 @@ const Env = z.object({
   GEMINI_API_KEY: z.string().optional(),
   ANTHROPIC_API_KEY: z.string().optional(),
   TOKEN_ENCRYPTION_KEY: z.string().optional(),
+  GOOGLE_CLIENT_ID: z.string().optional(),
+  GOOGLE_CLIENT_SECRET: z.string().optional(),
+  GOOGLE_REDIRECT_URI: z.string().default("http://localhost:8787/auth/google/callback"),
+  WEB_ORIGIN: z.string().default("http://localhost:5173"),
   SEND_HOLD_SECONDS: z.coerce.number().default(60),
 });
 

@@ -1,6 +1,7 @@
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { getDefaultEnvironment } from "@modelcontextprotocol/sdk/client/stdio.js";
+const GOOGLE_AUTH_PREFIX = "GOOGLE_AUTH:"; // keep in sync with @munshi/mcp-common/google (not imported: avoids loading googleapis)
 import { META_KEY, ToolMeta, toolMeta } from "@munshi/mcp-common";
 import { createRequire } from "node:module";
 import { resolve } from "node:path";
@@ -19,6 +20,8 @@ export interface HubOptions {
   /** Directory for sandbox JSON stores (shared by the child processes). */
   sandboxDir: string;
   backend?: "sandbox" | "google";
+  /** Extra env for the child processes (e.g. Google OAuth refresh token in google mode). */
+  env?: Record<string, string>;
 }
 
 export interface ToolInfo {
@@ -35,6 +38,8 @@ export interface ToolInfo {
 }
 
 export class McpToolError extends Error {}
+/** The Google grant is revoked/expired/insufficient: the user must reconnect. */
+export class GoogleAuthToolError extends McpToolError {}
 
 /**
  * Cross-platform stdio spawn: always `process.execPath --import <tsx loader> <entry.ts>`.
@@ -48,6 +53,7 @@ export function stdioParams(server: ServerName, opts: HubOptions) {
     args: ["--import", tsxLoader, entry],
     env: {
       ...getDefaultEnvironment(),
+      ...(opts.env ?? {}),
       MUNSHI_BACKEND: opts.backend ?? "sandbox",
       SANDBOX_STORE_DIR: resolve(opts.sandboxDir),
     },
@@ -62,7 +68,21 @@ export class McpHub {
   /** Snapshot from the last listTools() (populated by connect()). */
   toolInfos: ToolInfo[] = [];
 
-  constructor(private readonly opts: HubOptions) {}
+  /** Called when a tool reports a Google auth problem. */
+  onAuthProblem?: (message: string) => void;
+
+  constructor(private opts: HubOptions) {}
+
+  get backend(): "sandbox" | "google" {
+    return this.opts.backend ?? "sandbox";
+  }
+
+  /** Restart the child processes with a different backend / credentials (per-user mode switch). */
+  async reconnect(opts: HubOptions): Promise<void> {
+    await this.close();
+    this.opts = opts;
+    await this.connect();
+  }
 
   async connect(): Promise<void> {
     for (const name of Object.keys(ENTRYPOINTS) as ServerName[]) {
@@ -103,7 +123,13 @@ export class McpHub {
     const res = await this.clients.get(server)!.callTool({ name, arguments: args });
     const text = (res.content as { type: string; text?: string }[] | undefined)
       ?.find((c) => c.type === "text")?.text ?? "";
-    if (res.isError) throw new McpToolError(text || `Tool ${name} failed`);
+    if (res.isError) {
+      if (text.startsWith(GOOGLE_AUTH_PREFIX)) {
+        this.onAuthProblem?.(text.slice(GOOGLE_AUTH_PREFIX.length).trim());
+        throw new GoogleAuthToolError(text.slice(GOOGLE_AUTH_PREFIX.length).trim());
+      }
+      throw new McpToolError(text || `Tool ${name} failed`);
+    }
     try {
       return JSON.parse(text);
     } catch {

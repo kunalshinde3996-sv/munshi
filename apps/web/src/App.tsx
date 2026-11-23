@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { api, api2, type Action, type Health } from "./api";
-import { usePoll } from "./components";
+import { Banner, usePoll } from "./components";
+import ModeControl, { ModeBadge } from "./ModeControl";
 import Activity from "./pages/Activity";
 import Approvals from "./pages/Approvals";
 import Inbox from "./pages/Inbox";
@@ -24,8 +25,17 @@ export default function App() {
   usePoll(refreshActions, 2000);
   const pending = actions.filter((x) => x.status === "pending_approval");
 
+  const loadHealth = () => api.health().then((h) => { setHealth(h); setOffline(false); }).catch(() => setOffline(true));
+  usePoll(loadHealth, 5000);
+
+  // Result of the Google OAuth redirect (?google=connected|denied|error&message=...)
+  const [notice, setNotice] = useState<{ tone: "green" | "red"; text: string } | null>(null);
   useEffect(() => {
-    api.health().then(setHealth).catch(() => setOffline(true));
+    const q = new URLSearchParams(window.location.search);
+    const g = q.get("google");
+    if (!g) return;
+    setNotice(g === "connected" ? { tone: "green", text: "Google connected. Use “Use Google” to switch the mailbox." } : { tone: "red", text: `Google connection failed: ${q.get("message") ?? g}` });
+    window.history.replaceState({}, "", window.location.pathname);
   }, []);
 
   return (
@@ -36,12 +46,9 @@ export default function App() {
             <span className="grid h-8 w-8 place-items-center rounded-lg bg-ink text-lg font-bold text-saffron">म</span>
             <span className="text-lg font-semibold tracking-tight">Munshi</span>
           </div>
-          <div className="flex items-center gap-3">
-            {health?.mode === "google" ? (
-              <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold tracking-wide text-emerald-800">GOOGLE</span>
-            ) : (
-              <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold tracking-wide text-amber-800">SANDBOX DATA</span>
-            )}
+          <div className="flex flex-wrap items-center justify-end gap-3">
+            <ModeControl onModeChange={() => void loadHealth()} />
+            <ModeBadge mode={health?.mode} />
             <span className="hidden text-xs text-stone-500 sm:inline">
               {health?.llmModel ? `${health.llmProvider} · ${health.llmModel}` : "LLM not configured"}
             </span>
@@ -69,7 +76,8 @@ export default function App() {
         </nav>
       </header>
 
-      <main className="mx-auto max-w-5xl px-4 py-8">
+      <main key={health?.mode} className="mx-auto max-w-5xl space-y-6 px-4 py-8">
+        {notice && <Banner tone={notice.tone}>{notice.text}</Banner>}
         {page === "inbox" && <Inbox health={health} onActionsChange={() => void refreshActions()} goToApprovals={() => setPage("approvals")} />}
         {page === "approvals" && <Approvals pending={pending} refresh={() => void refreshActions()} />}
         {page === "activity" && <Activity actions={actions} refresh={() => void refreshActions()} />}

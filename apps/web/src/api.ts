@@ -6,6 +6,7 @@ export type Health = {
   llmModel: string | null;
   llmError: string | null;
   mcpConnected: boolean;
+  googleAuthProblem: string | null;
   agentAvailable: boolean;
   agentError: string | null;
   holdSeconds: number;
@@ -136,4 +137,20 @@ export const api2 = {
   addContact: (name: string, email: string) => post<unknown>("/api/contacts", { name, email }),
   deleteContact: (id: string) => req<unknown>(`/api/contacts/${id}`, { method: "DELETE" }),
   audit: (limit = 100) => req<{ entries: AuditEntry[] }>(`/api/audit?limit=${limit}`).then((r) => r.entries),
+};
+
+export type GoogleStatus = {
+  configured: boolean;
+  missing: string[];
+  redirectUri: string;
+  setupSteps: string[];
+  connected: boolean;
+  email: string | null;
+  mode: "sandbox" | "google";
+  authProblem: string | null;
+};
+export const googleApi = {
+  status: () => req<GoogleStatus>("/api/google/status"),
+  setMode: (mode: "sandbox" | "google") => post<GoogleStatus>("/api/settings/mode", { mode }),
+  disconnect: () => post<GoogleStatus>("/api/google/disconnect"),
 };
