@@ -116,3 +116,21 @@ export const auditLog = sqliteTable("audit_log", {
   actor: text("actor").notNull(), // "agent" | "guard" | "user" | "system"
   detail: text("detail").notNull(), // JSON
 });
+
+/**
+ * Provenance store: where values that could become tool arguments came from.
+ * Untrusted rows are written at scan time (sender / addresses found in email content);
+ * run-scoped trusted rows record addresses the user typed in their goal.
+ * Trusted account address and contacts are read live from users / contacts.
+ */
+export const provenance = sqliteTable("provenance", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: text("user_id").notNull(),
+  runId: text("run_id"), // set for user_goal rows
+  value: text("value").notNull(), // normalized (lowercase address)
+  kind: text("kind", { enum: ["user_goal", "email_sender", "email_content"] }).notNull(),
+  trusted: integer("trusted", { mode: "boolean" }).notNull(),
+  emailId: text("email_id"),
+  hidden: integer("hidden", { mode: "boolean" }).notNull().default(false),
+  createdAt: integer("created_at").notNull().default(now),
+});

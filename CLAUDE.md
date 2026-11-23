@@ -67,6 +67,19 @@ Every tool declares: `riskTier`, `reversible`, `undoTool?`, `verifyTool?`, `sens
 - LLM adapters use plain fetch (Gemini generateContent, Anthropic messages); mock LLM exists only in tests.
 - `npm run extract:live` runs the real configured LLM over all sandbox emails and prints a table (in-memory DB).
 
+## Guard (M4) — apps/server/src/guard
+- `Guard.evaluate(call)` is pure/deterministic: tool known → agentCallable → not R3 → strict zod args → obligation exists →
+  provenance of sensitiveArgs → idempotency → policies (most restrictive wins) → hard invariants.
+  `Guard.propose` also writes the actions ledger + audit log.
+- Hard invariants (hold even if all policies are deleted): R2 always needs approval; tainted never auto-allowed; tainted R2 to a
+  non-allowlisted recipient is blocked; R3 / undo-only tools are never agent-callable.
+- Taint: a value is trusted iff typed by the user in this run's goal, or is the user's own address, or is a contact that no email introduced.
+  Allowlisted = own address or contact. "Tainted + allowlisted" = a contact whose address an email introduced → approval with red warning.
+- `provenance` table: untrusted rows written at scan (sender + addresses in email content, hidden flag); run-scoped trusted rows for goal text.
+- `Guard.authorizeUndo(tool,args)`: only undo-only tools, only for artifacts whose ledger row (executed/verified) proves Munshi created them.
+- `audit_log` is append-only via SQLite triggers (migration 0003); only `audit.ts` inserts.
+- Tool arg schemas live in `mcp-common/src/schemas.ts` (shared by MCP servers and Guard).
+
 ## Seed policies
 Never auto-send email; block tainted send_email to non-allowlisted recipients;
 auto-allow calendar reminders for obligations with confidence >= 0.8.
@@ -75,7 +88,7 @@ auto-allow calendar reminders for obligations with confidence >= 0.8.
 - [x] M1 Monorepo scaffold, CLAUDE.md, env, DB schema + migrations, Fastify health route, web shell
 - [x] M2 MCP servers (sandbox backends + fixtures) + server MCP client; debug route listing tools
 - [x] M3 LLM adapter (Gemini + Anthropic) + Quarantined Extractor + obligations API + UI cards
-- [ ] M4 Guard with unit tests (tainted recipient, R3 block, duplicate skip, policy paths)
+- [x] M4 Guard with unit tests (tainted recipient, R3 block, duplicate skip, policy paths)
 - [ ] M5 Agent runtime + approvals + execute + verify + undo + hold window; run timeline UI
 - [ ] M6 Google OAuth + GoogleBackend (encrypted tokens)
 - [ ] M7 E2E sandbox script (scan → handle → approve → verify → undo, + injection), README + demo

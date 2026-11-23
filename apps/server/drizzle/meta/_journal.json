@@ -15,6 +15,20 @@
       "when": 1795457546567,
       "tag": "0001_brainy_callisto",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1795458068926,
+      "tag": "0002_provenance",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1795458071549,
+      "tag": "0003_audit_append_only",
+      "breakpoints": true
     }
   ]
 }

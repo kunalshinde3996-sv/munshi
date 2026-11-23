@@ -2,6 +2,8 @@ import { SANDBOX_USER_EMAIL } from "@munshi/mcp-common";
 import { desc, eq } from "drizzle-orm";
 import { audit } from "./audit.js";
 import { schema, type Db } from "./db/index.js";
+import { Guard } from "./guard/guard.js";
+import { ProvenanceStore } from "./guard/provenance.js";
 import { extractObligations, type RawEmail, type SecurityFlags } from "./extraction/extractor.js";
 import type { LlmAdapter } from "./llm/types.js";
 import type { McpHub } from "./mcp/hub.js";
@@ -10,6 +12,7 @@ export const USER_ID = "local";
 
 export function ensureUser(db: Db) {
   db.insert(schema.users).values({ id: USER_ID, email: SANDBOX_USER_EMAIL, mode: "sandbox" }).onConflictDoNothing().run();
+  new Guard(db, USER_ID).seedPolicies();
 }
 
 export interface ScanSummary {
@@ -80,6 +83,8 @@ export async function scanInbox({ db, mcp, llm, force = false, now = new Date(),
       out.failed++;
       audit(db, { event: "failed", actor: "system", detail: { kind: "extraction_failed", emailId: email.id, error: result.error } });
     }
+    // Provenance: remember every address this (untrusted) email introduced, so the Guard can explain taint.
+    new ProvenanceStore(db, USER_ID).recordEmail(email.id, email.from.address, result.sanitizedBody, email.body);
     recordFlags(db, email.id, result.flags);
     if (result.flags.hiddenContent.length) out.hiddenContentEmails++;
     if (result.flags.injectionSuspected.length) out.injectionEmails++;
