@@ -109,6 +109,10 @@ export class Guard {
       checks.push({ step: "tool", outcome: "fail", detail: "tool is Guard-internal (undo-only)" });
       return blocked("guard:not-agent-callable", `“${call.tool}” is an undo-only tool; the agent can never call it.`, { tier });
     }
+    if (meta.returnsUntrusted) {
+      checks.push({ step: "tool", outcome: "fail", detail: "returns untrusted content; not offered to the agent" });
+      return blocked("guard:untrusted-output-tool", `“${call.tool}” returns raw outside content and is not available to the agent.`, { tier });
+    }
     if (tier === "R3") {
       checks.push({ step: "tier", outcome: "fail", detail: "R3 is blocked in this prototype" });
       return blocked("guard:r3-blocked", `“${call.tool}” is destructive/financial (R3) and is blocked in this prototype.`, { tier });
@@ -221,6 +225,7 @@ export class Guard {
       riskTier: tier, tainted: result.tainted,
       decision: result.decision === "skip" ? "skipped" : result.decision,
       decisionReason: result.reason, status,
+      guardJson: JSON.stringify({ ...result, taint: result.taint.map(({ trace: _t, ...rest }) => rest) }),
     }).run();
     audit(this.db, { event: "proposed", actor: "agent", runId: call.runId, actionId, detail: { tool: call.tool, args: result.args, obligationId: call.obligationId, preview: result.preview } });
     audit(this.db, { event: result.decision === "skip" ? "skipped" : "decision", actor: "guard", runId: call.runId, actionId, detail: { decision: result.decision, rule: result.rule, reason: result.reason, tainted: result.tainted, warnings: result.warnings, checks: result.checks } });

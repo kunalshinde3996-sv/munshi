@@ -174,8 +174,9 @@ describe("Guard: validation, idempotency, policy paths", () => {
     expect(t.guard.evaluate({ runId: "r", tool: "create_event", obligationId: "nope", args: eventArgs })).toMatchObject({ rule: "guard:unknown-obligation" });
   });
 
-  it("R0 reads are auto-allowed", () => {
-    expect(t.guard.evaluate({ runId: "r", tool: "list_recent_emails", args: {} })).toMatchObject({ decision: "allow", rule: "default:r0", tier: "R0" });
+  it("tools that return raw outside content are never available to the agent", () => {
+    for (const tool of ["list_recent_emails", "get_email", "list_events", "get_event"])
+      expect(t.guard.evaluate({ runId: "r", tool, args: tool === "get_email" || tool === "get_event" ? { id: "x" } : {} })).toMatchObject({ decision: "block", rule: "guard:untrusted-output-tool" });
   });
 
   it("create_event: auto-allow at confidence >= 0.8 (seed policy), approval below or without an obligation", () => {
@@ -207,7 +208,7 @@ describe("Guard: validation, idempotency, policy paths", () => {
 
     t.db.update(schema.policies).set({ ruleJson: "{not json" }).where(eq(schema.policies.id, "seed-auto-calendar-reminders")).run();
     expect(t.guard.evaluate({ runId: "r", tool: "create_event", obligationId: "ob-high", args: eventArgs }).decision).toBe("require_approval");
-    r = t.guard.evaluate({ runId: "r", tool: "list_recent_emails", args: {} });
+    r = t.guard.evaluate({ runId: "r", tool: "get_draft", args: { id: "d1" } });
     expect(r.decision).toBe("allow");
   });
 
@@ -236,8 +237,8 @@ describe("Guard: validation, idempotency, policy paths", () => {
   });
 
   it("reads are never treated as duplicates", () => {
-    t.guard.propose({ runId: "r", tool: "list_recent_emails", args: {} });
-    expect(t.guard.evaluate({ runId: "r", tool: "list_recent_emails", args: {} }).decision).toBe("allow");
+    t.guard.propose({ runId: "r", tool: "get_draft", args: { id: "d1" } });
+    expect(t.guard.evaluate({ runId: "r", tool: "get_draft", args: { id: "d1" } }).decision).toBe("allow");
   });
 
   it("builds a human-readable preview", () => {
@@ -277,7 +278,7 @@ describe("policy engine", () => {
 describe("audit log is append-only (enforced by the database)", () => {
   it("INSERT works; UPDATE and DELETE are rejected by triggers", () => {
     const { db, sqlite, guard } = setup();
-    guard.propose({ runId: "r", tool: "list_recent_emails", args: {} });
+    guard.propose({ runId: "r", tool: "get_draft", args: { id: "d1" } });
     const rows = db.select().from(schema.auditLog).all();
     expect(rows.map((r) => r.event)).toEqual(["proposed", "decision"]);
 

@@ -78,6 +78,8 @@ export const agentRuns = sqliteTable("agent_runs", {
     enum: ["running", "awaiting_approval", "completed", "failed"],
   }).notNull(),
   traceJson: text("trace_json").notNull().default("[]"), // full trace for the UI
+  /** Persisted agent conversation + pending step, so runs survive restarts and resume after approvals. */
+  stateJson: text("state_json"),
   startedAt: integer("started_at").notNull().default(now),
   finishedAt: integer("finished_at"),
 });
@@ -99,6 +101,9 @@ export const actions = sqliteTable("actions", {
       "verified", "verification_failed", "undone", "skipped", "failed"],
   }).notNull(),
   resultJson: text("result_json"),
+  /** Full Guard result (preview, warnings, taint, checks, rule) for the approvals UI and Security view. */
+  guardJson: text("guard_json"),
+  verifyJson: text("verify_json"),
   holdUntil: integer("hold_until"),
   createdAt: integer("created_at").notNull().default(now),
 });
@@ -110,7 +115,7 @@ export const auditLog = sqliteTable("audit_log", {
   runId: text("run_id"),
   actionId: text("action_id"),
   event: text("event", {
-    enum: ["hidden_content_detected", "injection_suspected", "proposed", "decision", "approved", "rejected", "executed", "verified",
+    enum: ["held", "hidden_content_detected", "injection_suspected", "proposed", "decision", "approved", "rejected", "executed", "verified",
       "verification_failed", "undone", "skipped", "failed"],
   }).notNull(),
   actor: text("actor").notNull(), // "agent" | "guard" | "user" | "system"

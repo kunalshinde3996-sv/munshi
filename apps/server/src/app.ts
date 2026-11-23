@@ -7,6 +7,8 @@ import { schema } from "./db/index.js";
 import { sanitizeEmailBody } from "./extraction/sanitize.js";
 import { LlmError, type LlmAdapter } from "./llm/types.js";
 import type { McpHub } from "./mcp/hub.js";
+import { registerAgentRoutes } from "./routes.js";
+import type { Services } from "./services.js";
 import { listEmails, listObligations, scanInbox } from "./scan.js";
 import { eq } from "drizzle-orm";
 
@@ -17,11 +19,12 @@ export interface AppDeps {
   /** Undefined when not configured; `llmError` then explains why. */
   llm?: LlmAdapter;
   llmError?: string;
+  services?: Services;
 }
 
 const MODE = { mode: "sandbox", label: "SANDBOX DATA" } as const;
 
-export function buildApp({ config, db, mcp, llm, llmError }: AppDeps) {
+export function buildApp({ config, db, mcp, llm, llmError, services }: AppDeps) {
   const app = Fastify({ logger: process.env.NODE_ENV !== "test" });
   app.register(cors, { origin: true });
 
@@ -31,6 +34,9 @@ export function buildApp({ config, db, mcp, llm, llmError }: AppDeps) {
     llmProvider: config.LLM_PROVIDER,
     llmConfigured: Boolean(llm),
     llmModel: llm?.model ?? null,
+    agentAvailable: Boolean(services?.runtime),
+    agentError: services?.runtime ? null : (services?.agentError ?? "Agent not configured"),
+    holdSeconds: config.SEND_HOLD_SECONDS,
     llmError: llm ? null : (llmError ?? "LLM not configured"),
     mode: MODE.mode,
     mcpConnected: Boolean(mcp),
@@ -82,6 +88,9 @@ export function buildApp({ config, db, mcp, llm, llmError }: AppDeps) {
     };
   });
 
+  registerAgentRoutes(app, db, services);
+
+  if (services) app.addHook("onClose", async () => { services.executor.stopScheduler(); await services.runtime?.whenIdle(); });
   if (mcp) app.addHook("onClose", async () => mcp.close());
   return app;
 }

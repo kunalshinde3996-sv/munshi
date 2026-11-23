@@ -80,6 +80,18 @@ Every tool declares: `riskTier`, `reversible`, `undoTool?`, `verifyTool?`, `sens
 - `audit_log` is append-only via SQLite triggers (migration 0003); only `audit.ts` inserts.
 - Tool arg schemas live in `mcp-common/src/schemas.ts` (shared by MCP servers and Guard).
 
+## Agent runtime (M5) — apps/server/src/agent, llm/agent.ts
+- Tool-calling adapters (`AgentLlm`: Gemini, Anthropic) are separate from the text-only extractor `LlmAdapter`.
+- Agent sees: goal + vetted obligations (in `<untrusted_obligations>`, incl. `senderAddress`) + WRITE tools only (R1/R2, agentCallable,
+  not returnsUntrusted). It has no read tools, so raw email text never reaches it. `obligationId` is injected into each tool schema and
+  stripped before the Guard. Tool results fed back to the model are generic (no email-derived text).
+- `AgentRuntime`: max 8 steps; every call → `Guard.propose`; allow → `ActionExecutor.executeApproved`; require_approval → run pauses
+  (`awaiting_approval`, conversation in `agent_runs.state_json`); `onActionSettled` resumes it. `recover()` resumes/fails runs after restart.
+- `ActionExecutor`: approve (tainted needs `acknowledgeTaint`) / reject / execute → verify (`verify.ts` reads back via get_* and compares) / undo
+  (via `Guard.authorizeUndo` + read-back). send_email → status `held` with `holdUntil`; `releaseDueHolds` (1s scheduler, also on startup) sends only after
+  the window; undo during hold = cancel. All state is in the `actions` ledger.
+- API: /api/runs, /api/runs/:id, /api/actions(+approve/reject/undo), /api/audit, /api/policies, /api/contacts.
+
 ## Seed policies
 Never auto-send email; block tainted send_email to non-allowlisted recipients;
 auto-allow calendar reminders for obligations with confidence >= 0.8.
@@ -89,7 +101,7 @@ auto-allow calendar reminders for obligations with confidence >= 0.8.
 - [x] M2 MCP servers (sandbox backends + fixtures) + server MCP client; debug route listing tools
 - [x] M3 LLM adapter (Gemini + Anthropic) + Quarantined Extractor + obligations API + UI cards
 - [x] M4 Guard with unit tests (tainted recipient, R3 block, duplicate skip, policy paths)
-- [ ] M5 Agent runtime + approvals + execute + verify + undo + hold window; run timeline UI
+- [x] M5 Agent runtime + approvals + execute + verify + undo + hold window; run timeline UI
 - [ ] M6 Google OAuth + GoogleBackend (encrypted tokens)
 - [ ] M7 E2E sandbox script (scan → handle → approve → verify → undo, + injection), README + demo
 

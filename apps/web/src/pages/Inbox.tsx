@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import RunPanel from "./RunPanel";
 import { api, type EmailDetail, type EmailRow, type Health, type Obligation, type ScanSummary } from "../api";
 
 const TYPE_STYLE: Record<string, string> = {
@@ -111,7 +112,7 @@ function FlagList({ flags }: { flags: EmailDetail["flags"] }) {
   return <ul className="mb-3 list-disc space-y-1 rounded-lg border border-amber-300 bg-amber-50 p-3 pl-7 text-xs text-amber-950">{items}</ul>;
 }
 
-export default function Inbox({ health }: { health: Health | null }) {
+export default function Inbox({ health, onActionsChange, goToApprovals }: { health: Health | null; onActionsChange: () => void; goToApprovals: () => void }) {
   const [obligations, setObligations] = useState<Obligation[]>([]);
   const [emails, setEmails] = useState<EmailRow[]>([]);
   const [scanning, setScanning] = useState(false);
@@ -186,6 +187,8 @@ export default function Inbox({ health }: { health: Health | null }) {
           {summary.injectionEmails > 0 && `${summary.injectionEmails} look like prompt-injection attempts.`}
         </p>
       )}
+
+      <RunPanel health={health} obligationCount={obligations.length} onChange={onActionsChange} goToApprovals={goToApprovals} />
 
       {failed.length > 0 && (
         <section>

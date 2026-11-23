@@ -21,6 +21,8 @@ export const ToolMeta = z.object({
    * (e.g. as an undo step on an action the Guard itself executed).
    */
   agentCallable: z.boolean(),
+  /** Output may contain text written by outside parties (email bodies, event descriptions). Never offered to the agent. */
+  returnsUntrusted: z.boolean().optional(),
 });
 export type ToolMeta = z.infer<typeof ToolMeta>;
 
@@ -28,8 +30,8 @@ export const META_KEY = "munshi";
 
 export const TOOL_META = {
   // ---- mcp-gmail ----
-  list_recent_emails: { server: "gmail", riskTier: "R0", reversible: true, sensitiveArgs: [], agentCallable: true },
-  get_email: { server: "gmail", riskTier: "R0", reversible: true, sensitiveArgs: [], agentCallable: true },
+  list_recent_emails: { server: "gmail", riskTier: "R0", reversible: true, sensitiveArgs: [], agentCallable: true, returnsUntrusted: true },
+  get_email: { server: "gmail", riskTier: "R0", reversible: true, sensitiveArgs: [], agentCallable: true, returnsUntrusted: true },
   get_draft: { server: "gmail", riskTier: "R0", reversible: true, sensitiveArgs: [], agentCallable: true },
   create_draft: {
     server: "gmail", riskTier: "R1", reversible: true, undoTool: "delete_draft", verifyTool: "get_draft",
@@ -48,8 +50,8 @@ export const TOOL_META = {
   remove_label: { server: "gmail", riskTier: "R1", reversible: true, sensitiveArgs: [], agentCallable: false },
 
   // ---- mcp-calendar ----
-  list_events: { server: "calendar", riskTier: "R0", reversible: true, sensitiveArgs: [], agentCallable: true },
-  get_event: { server: "calendar", riskTier: "R0", reversible: true, sensitiveArgs: [], agentCallable: true },
+  list_events: { server: "calendar", riskTier: "R0", reversible: true, sensitiveArgs: [], agentCallable: true, returnsUntrusted: true },
+  get_event: { server: "calendar", riskTier: "R0", reversible: true, sensitiveArgs: [], agentCallable: true, returnsUntrusted: true },
   create_event: {
     server: "calendar", riskTier: "R1", reversible: true, undoTool: "delete_event", verifyTool: "get_event",
     sensitiveArgs: ["attendees"], agentCallable: true,

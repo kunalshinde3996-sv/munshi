@@ -1,11 +1,16 @@
 import { useEffect, useState } from "react";
-import { api, type Health } from "./api";
+import { api, api2, type Action, type Health } from "./api";
+import { usePoll } from "./components";
+import Activity from "./pages/Activity";
+import Approvals from "./pages/Approvals";
 import Inbox from "./pages/Inbox";
+import Policies from "./pages/Policies";
 
-type Page = "inbox" | "activity" | "policies";
+type Page = "inbox" | "approvals" | "activity" | "policies";
 
 const TABS: { id: Page; label: string }[] = [
   { id: "inbox", label: "Inbox" },
+  { id: "approvals", label: "Approvals" },
   { id: "activity", label: "Activity" },
   { id: "policies", label: "Policies" },
 ];
@@ -14,6 +19,10 @@ export default function App() {
   const [health, setHealth] = useState<Health | null>(null);
   const [offline, setOffline] = useState(false);
   const [page, setPage] = useState<Page>("inbox");
+  const [actions, setActions] = useState<Action[]>([]);
+  const refreshActions = async () => setActions(await api2.actions());
+  usePoll(refreshActions, 2000);
+  const pending = actions.filter((x) => x.status === "pending_approval");
 
   useEffect(() => {
     api.health().then(setHealth).catch(() => setOffline(true));
@@ -52,19 +61,19 @@ export default function App() {
               }`}
             >
               {t.label}
+              {t.id === "approvals" && pending.length > 0 && (
+                <span className="ml-1.5 rounded-full bg-amber-500 px-1.5 py-0.5 text-xs font-bold text-white">{pending.length}</span>
+              )}
             </button>
           ))}
         </nav>
       </header>
 
       <main className="mx-auto max-w-5xl px-4 py-8">
-        {page === "inbox" && <Inbox health={health} />}
-        {page === "activity" && (
-          <p className="text-sm text-stone-600">The audit trail and undo controls arrive in milestone M5.</p>
-        )}
-        {page === "policies" && (
-          <p className="text-sm text-stone-600">Policy and contacts management arrives in milestone M4.</p>
-        )}
+        {page === "inbox" && <Inbox health={health} onActionsChange={() => void refreshActions()} goToApprovals={() => setPage("approvals")} />}
+        {page === "approvals" && <Approvals pending={pending} refresh={() => void refreshActions()} />}
+        {page === "activity" && <Activity actions={actions} refresh={() => void refreshActions()} />}
+        {page === "policies" && <Policies />}
       </main>
     </div>
   );

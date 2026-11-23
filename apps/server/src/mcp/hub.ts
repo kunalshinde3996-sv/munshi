@@ -59,6 +59,8 @@ export function stdioParams(server: ServerName, opts: HubOptions) {
 export class McpHub {
   private clients = new Map<ServerName, Client>();
   private toolOwner = new Map<string, ServerName>();
+  /** Snapshot from the last listTools() (populated by connect()). */
+  toolInfos: ToolInfo[] = [];
 
   constructor(private readonly opts: HubOptions) {}
 
@@ -90,6 +92,7 @@ export class McpHub {
         });
       }
     }
+    this.toolInfos = out;
     return out;
   }
 

@@ -1,7 +1,8 @@
 import { buildApp } from "./app.js";
 import { loadConfig } from "./config.js";
 import { openDb } from "./db/index.js";
-import { createLlm } from "./llm/index.js";
+import { createAgentLlm, createLlm } from "./llm/index.js";
+import { createServices } from "./services.js";
 import { McpHub } from "./mcp/hub.js";
 import { ensureUser } from "./scan.js";
 
@@ -11,8 +12,12 @@ ensureUser(db);
 const mcp = new McpHub({ sandboxDir: config.SANDBOX_STORE_DIR });
 await mcp.connect();
 const made = createLlm(config);
+const madeAgent = createAgentLlm(config);
+const services = createServices({ config, db, mcp, ...("agent" in madeAgent ? { agent: madeAgent.agent } : { agentError: madeAgent.error }) });
+services.executor.startScheduler();
+services.runtime?.recover();
 const app = buildApp({
-  config, db, mcp,
+  config, db, mcp, services,
   ...("llm" in made ? { llm: made.llm } : { llmError: made.error }),
 });
 
