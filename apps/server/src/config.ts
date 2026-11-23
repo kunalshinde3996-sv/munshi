@@ -1,5 +1,10 @@
-import "dotenv/config";
+import { config as loadDotenv } from "dotenv";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { z } from "zod";
+
+// Load the repo-root .env regardless of which workspace dir npm runs us from.
+loadDotenv({ path: resolve(dirname(fileURLToPath(import.meta.url)), "../../../.env"), quiet: true });
 
 const Env = z.object({
   PORT: z.coerce.number().default(8787),

@@ -57,6 +57,16 @@ Every tool declares: `riskTier`, `reversible`, `undoTool?`, `verifyTool?`, `sens
   generated relative to today; user writes (drafts, sent, labels, events) are layered on top.
 - MCP servers are spawned cross-platform: `process.execPath --import <tsx loader URL> <entry.ts>` (apps/server/src/mcp/hub.ts).
 
+## Extraction pipeline (M3)
+- `extraction/sanitize.ts`: deterministic; strips hidden content (display:none, zero font, white text, comments,
+  zero-width chars), REPORTS it ("hidden content detected"), flags injection phrasing. Flag-only; never relied on for security.
+- `extraction/extractor.ts`: Extractor LLM (text-in/text-out adapter, no tool surface). Structural errors → retry once →
+  `extraction_failed` (stored + shown). Then `vetObligations`: rejects (visibly, in `security_flags_json`) any obligation whose
+  fields hold an address/URL/instruction-like text, whose evidence quote is not verbatim in the sanitized email, or comes from a flagged injection line.
+- Fatal LLM errors (401/403/404/400) abort the scan; other errors fail only that email.
+- LLM adapters use plain fetch (Gemini generateContent, Anthropic messages); mock LLM exists only in tests.
+- `npm run extract:live` runs the real configured LLM over all sandbox emails and prints a table (in-memory DB).
+
 ## Seed policies
 Never auto-send email; block tainted send_email to non-allowlisted recipients;
 auto-allow calendar reminders for obligations with confidence >= 0.8.
@@ -64,7 +74,7 @@ auto-allow calendar reminders for obligations with confidence >= 0.8.
 ## Milestones
 - [x] M1 Monorepo scaffold, CLAUDE.md, env, DB schema + migrations, Fastify health route, web shell
 - [x] M2 MCP servers (sandbox backends + fixtures) + server MCP client; debug route listing tools
-- [ ] M3 LLM adapter (Gemini + Anthropic) + Quarantined Extractor + obligations API + UI cards
+- [x] M3 LLM adapter (Gemini + Anthropic) + Quarantined Extractor + obligations API + UI cards
 - [ ] M4 Guard with unit tests (tainted recipient, R3 block, duplicate skip, policy paths)
 - [ ] M5 Agent runtime + approvals + execute + verify + undo + hold window; run timeline UI
 - [ ] M6 Google OAuth + GoogleBackend (encrypted tokens)

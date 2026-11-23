@@ -3,13 +3,19 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "workspaces": ["apps/*", "packages/*"],
-  "engines": { "node": ">=20" },
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "dev:server": "npm run dev -w @munshi/server",
     "dev:web": "npm run dev -w @munshi/web",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
-    "db:generate": "npm run db:generate -w @munshi/server"
+    "db:generate": "npm run db:generate -w @munshi/server",
+    "extract:live": "npm run extract:live -w @munshi/server"
   }
 }

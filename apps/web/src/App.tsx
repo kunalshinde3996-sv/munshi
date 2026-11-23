@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
+import { api, type Health } from "./api";
+import Inbox from "./pages/Inbox";
 
-type Health = { ok: boolean; llmProvider: string; llmConfigured: boolean };
 type Page = "inbox" | "activity" | "policies";
 
 const TABS: { id: Page; label: string }[] = [
@@ -15,10 +16,7 @@ export default function App() {
   const [page, setPage] = useState<Page>("inbox");
 
   useEffect(() => {
-    fetch("/api/health")
-      .then((r) => r.json() as Promise<Health>)
-      .then(setHealth)
-      .catch(() => setOffline(true));
+    api.health().then(setHealth).catch(() => setOffline(true));
   }, []);
 
   return (
@@ -26,24 +24,20 @@ export default function App() {
       <header className="border-b border-stone-200 bg-white">
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-4 py-3">
           <div className="flex items-center gap-2">
-            <span className="grid h-8 w-8 place-items-center rounded-lg bg-ink text-lg font-bold text-saffron">
-              म
-            </span>
+            <span className="grid h-8 w-8 place-items-center rounded-lg bg-ink text-lg font-bold text-saffron">म</span>
             <span className="text-lg font-semibold tracking-tight">Munshi</span>
           </div>
           <div className="flex items-center gap-3">
-            {/* Mode is hardcoded to sandbox until the per-user setting API lands (M2/M6). */}
-            <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold tracking-wide text-amber-800">
-              SANDBOX DATA
+            {health?.mode === "google" ? (
+              <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold tracking-wide text-emerald-800">GOOGLE</span>
+            ) : (
+              <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold tracking-wide text-amber-800">SANDBOX DATA</span>
+            )}
+            <span className="hidden text-xs text-stone-500 sm:inline">
+              {health?.llmModel ? `${health.llmProvider} · ${health.llmModel}` : "LLM not configured"}
             </span>
-            <span
-              className={`flex items-center gap-1.5 text-xs ${offline ? "text-red-600" : "text-stone-500"}`}
-            >
-              <span
-                className={`h-2 w-2 rounded-full ${
-                  offline ? "bg-red-500" : health?.ok ? "bg-emerald-500" : "bg-stone-300"
-                }`}
-              />
+            <span className={`flex items-center gap-1.5 text-xs ${offline ? "text-red-600" : "text-stone-500"}`}>
+              <span className={`h-2 w-2 rounded-full ${offline ? "bg-red-500" : health?.ok ? "bg-emerald-500" : "bg-stone-300"}`} />
               {offline ? "server offline" : health?.ok ? "server ok" : "connecting…"}
             </span>
           </div>
@@ -54,9 +48,7 @@ export default function App() {
               key={t.id}
               onClick={() => setPage(t.id)}
               className={`border-b-2 px-3 py-2 text-sm font-medium ${
-                page === t.id
-                  ? "border-saffron text-ink"
-                  : "border-transparent text-stone-500 hover:text-ink"
+                page === t.id ? "border-saffron text-ink" : "border-transparent text-stone-500 hover:text-ink"
               }`}
             >
               {t.label}
@@ -66,16 +58,12 @@ export default function App() {
       </header>
 
       <main className="mx-auto max-w-5xl px-4 py-8">
-        <h1 className="text-2xl font-semibold capitalize">{page}</h1>
-        <p className="mt-2 text-sm text-stone-600">
-          {page === "inbox" && "Inbox scanning arrives in milestone M3."}
-          {page === "activity" && "The audit trail and undo controls arrive in milestone M5."}
-          {page === "policies" && "Policy and contacts management arrives in milestone M4."}
-        </p>
-        {health && !health.llmConfigured && (
-          <p className="mt-6 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
-            LLM_MODEL is not set in <code>.env</code> — extraction will not work until it is.
-          </p>
+        {page === "inbox" && <Inbox health={health} />}
+        {page === "activity" && (
+          <p className="text-sm text-stone-600">The audit trail and undo controls arrive in milestone M5.</p>
+        )}
+        {page === "policies" && (
+          <p className="text-sm text-stone-600">Policy and contacts management arrives in milestone M4.</p>
         )}
       </main>
     </div>

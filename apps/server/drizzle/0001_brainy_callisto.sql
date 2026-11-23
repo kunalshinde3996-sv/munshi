@@ -1,0 +1,1 @@
+ALTER TABLE `emails` ADD `security_flags_json` text;

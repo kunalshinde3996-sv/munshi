@@ -30,6 +30,8 @@ export const emails = sqliteTable("emails", {
     enum: ["pending", "done", "extraction_failed"],
   }).notNull().default("pending"),
   extractionError: text("extraction_error"),
+  /** JSON: hidden content found, injection phrases, rejected obligations. Never silently dropped. */
+  securityFlagsJson: text("security_flags_json"),
 });
 
 export const obligations = sqliteTable("obligations", {
@@ -108,7 +110,7 @@ export const auditLog = sqliteTable("audit_log", {
   runId: text("run_id"),
   actionId: text("action_id"),
   event: text("event", {
-    enum: ["proposed", "decision", "approved", "rejected", "executed", "verified",
+    enum: ["hidden_content_detected", "injection_suspected", "proposed", "decision", "approved", "rejected", "executed", "verified",
       "verification_failed", "undone", "skipped", "failed"],
   }).notNull(),
   actor: text("actor").notNull(), // "agent" | "guard" | "user" | "system"

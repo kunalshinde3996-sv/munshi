@@ -1,13 +1,20 @@
 import { buildApp } from "./app.js";
 import { loadConfig } from "./config.js";
 import { openDb } from "./db/index.js";
+import { createLlm } from "./llm/index.js";
 import { McpHub } from "./mcp/hub.js";
+import { ensureUser } from "./scan.js";
 
 const config = loadConfig();
 const { db } = openDb(config.DATABASE_PATH);
+ensureUser(db);
 const mcp = new McpHub({ sandboxDir: config.SANDBOX_STORE_DIR });
 await mcp.connect();
-const app = buildApp({ config, db, mcp });
+const made = createLlm(config);
+const app = buildApp({
+  config, db, mcp,
+  ...("llm" in made ? { llm: made.llm } : { llmError: made.error }),
+});
 
 app.listen({ port: config.PORT, host: "127.0.0.1" }).catch((err) => {
   app.log.error(err);
