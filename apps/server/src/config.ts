@@ -4,6 +4,7 @@ import { z } from "zod";
 const Env = z.object({
   PORT: z.coerce.number().default(8787),
   DATABASE_PATH: z.string().default("./data/munshi.db"),
+  SANDBOX_STORE_DIR: z.string().default("./data/sandbox"),
   LLM_PROVIDER: z.enum(["gemini", "anthropic"]).default("gemini"),
   LLM_MODEL: z.string().optional(),
   GEMINI_API_KEY: z.string().optional(),

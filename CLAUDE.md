@@ -47,8 +47,15 @@ TypeScript, Node 20+, npm workspaces. SQLite + Drizzle, zod, vitest.
 
 ## MCP tool metadata
 Every tool declares: `riskTier`, `reversible`, `undoTool?`, `verifyTool?`, `sensitiveArgs` (e.g. to, cc, attendees).
-- mcp-gmail: list_recent_emails, get_email, create_draft, send_email, add_label
-- mcp-calendar: list_events, create_event, delete_event, get_event
+- mcp-gmail: list_recent_emails, get_email, get_draft, create_draft, add_label, send_email
+- mcp-calendar: list_events, get_event, create_event
+- Undo-only tools (`agentCallable: false`, Guard-internal, only on artifacts the Guard created):
+  delete_draft (R3), remove_label (R1), delete_event (R3). Agent must never be offered these.
+- Single source of truth for metadata: `packages/mcp-common/src/meta.ts` (TOOL_META). Servers advertise it in
+  tools/list `_meta.munshi`; `GET /api/debug/mcp/tools` shows registry vs advertised and flags drift.
+- Sandbox state persists in JSON files under SANDBOX_STORE_DIR (shared by stdio children). Fixture dates are
+  generated relative to today; user writes (drafts, sent, labels, events) are layered on top.
+- MCP servers are spawned cross-platform: `process.execPath --import <tsx loader URL> <entry.ts>` (apps/server/src/mcp/hub.ts).
 
 ## Seed policies
 Never auto-send email; block tainted send_email to non-allowlisted recipients;
@@ -56,7 +63,7 @@ auto-allow calendar reminders for obligations with confidence >= 0.8.
 
 ## Milestones
 - [x] M1 Monorepo scaffold, CLAUDE.md, env, DB schema + migrations, Fastify health route, web shell
-- [ ] M2 MCP servers (sandbox backends + fixtures) + server MCP client; debug route listing tools
+- [x] M2 MCP servers (sandbox backends + fixtures) + server MCP client; debug route listing tools
 - [ ] M3 LLM adapter (Gemini + Anthropic) + Quarantined Extractor + obligations API + UI cards
 - [ ] M4 Guard with unit tests (tainted recipient, R3 block, duplicate skip, policy paths)
 - [ ] M5 Agent runtime + approvals + execute + verify + undo + hold window; run timeline UI

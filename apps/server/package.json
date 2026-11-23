@@ -12,17 +12,21 @@
   },
   "dependencies": {
     "@fastify/cors": "^11.4.3",
+    "@modelcontextprotocol/sdk": "^1.32.2",
+    "@munshi/mcp-calendar": "^0.1.0",
+    "@munshi/mcp-common": "^0.1.0",
+    "@munshi/mcp-gmail": "^0.1.0",
     "better-sqlite3": "^13.2.0",
     "dotenv": "^18.0.10",
     "drizzle-orm": "^0.45.4",
     "fastify": "^5.12.8",
+    "tsx": "^4.23.15",
     "zod": "^4.6.7"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^9.6.0",
     "@types/node": "^26.6.6",
     "drizzle-kit": "^0.31.11",
-    "tsx": "^4.23.15",
     "typescript": "^7.0.2",
     "vitest": "^5.1.1"
   }
