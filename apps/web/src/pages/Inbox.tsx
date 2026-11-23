@@ -66,7 +66,7 @@ function ObligationCard({ o, onOpen }: { o: Obligation; onOpen: (id: string) => 
   );
 }
 
-function EmailDrawer({ id, onClose }: { id: string; onClose: () => void }) {
+export function EmailDrawer({ id, onClose }: { id: string; onClose: () => void }) {
   const [d, setD] = useState<EmailDetail | null>(null);
   const [err, setErr] = useState<string | null>(null);
   useEffect(() => {

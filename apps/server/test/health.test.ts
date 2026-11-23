@@ -13,6 +13,17 @@ describe("server shell", () => {
     expect(res.json()).toMatchObject({ ok: true, service: "munshi-server" });
   });
 
+  it("rejects cross-origin state changes and foreign Host headers", async () => {
+    const { db } = openDb(":memory:");
+    const app = buildApp({ config: loadConfig({}), db });
+    const evil = await app.inject({ method: "POST", url: "/api/actions/x/approve", headers: { origin: "https://evil.example" }, payload: {} });
+    expect(evil.statusCode).toBe(403);
+    const ui = await app.inject({ method: "POST", url: "/api/actions/x/approve", headers: { origin: "http://localhost:5173" }, payload: {} });
+    expect(ui.statusCode).not.toBe(403);
+    const rebinding = await app.inject({ method: "GET", url: "/api/health", headers: { host: "evil.example" } });
+    expect(rebinding.statusCode).toBe(403);
+  });
+
   it("migrations create the schema and DB accepts inserts", () => {
     const { db } = openDb(":memory:");
     db.insert(schema.users).values({ id: "u1", email: "me@example.com" }).run();

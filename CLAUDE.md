@@ -103,6 +103,13 @@ Every tool declares: `riskTier`, `reversible`, `undoTool?`, `verifyTool?`, `sens
 - mcp-common/mcp-gmail/mcp-calendar import googleapis only via the `/google` subpath (lazy), keeping sandbox children fast.
 - Data views are filtered by `emails.source` = current mode; real data is never labelled SANDBOX DATA.
 
+## Demo readiness (M7)
+- `npm run demo:reset` (stop server first): deletes DB + sandbox store, recreates schema/default policies.
+- `npm run e2e` / `test/e2e.test.ts`: offline scenario via the real Fastify routes + Guard + MCP + SQLite; only the two LLM calls are scripted mocks.
+- `GET /api/security` + Security page: every blocked/tainted action with rule + source email, suspicious emails, audit log.
+- API hardening in app.ts: Origin allowlist for non-GET, Host must be localhost (CSRF / DNS rebinding).
+- README.md: setup, demo, mermaid diagram, threat model, honest known-gaps list.
+
 ## Seed policies
 Never auto-send email; block tainted send_email to non-allowlisted recipients;
 auto-allow calendar reminders for obligations with confidence >= 0.8.
@@ -114,7 +121,7 @@ auto-allow calendar reminders for obligations with confidence >= 0.8.
 - [x] M4 Guard with unit tests (tainted recipient, R3 block, duplicate skip, policy paths)
 - [x] M5 Agent runtime + approvals + execute + verify + undo + hold window; run timeline UI
 - [x] M6 Google OAuth + GoogleBackend (encrypted tokens)
-- [ ] M7 E2E sandbox script (scan → handle → approve → verify → undo, + injection), README + demo
+- [x] M7 E2E sandbox script (scan → handle → approve → verify → undo, + injection), README + demo
 
 ## Out of scope (Phase 1)
 Telegram/WhatsApp, natural-language policy compiler, scheduled scans, Drive, deployment, attack

@@ -9,7 +9,9 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "db:generate": "drizzle-kit generate",
-    "extract:live": "tsx scripts/extract-live.ts"
+    "extract:live": "tsx scripts/extract-live.ts",
+    "demo:reset": "tsx scripts/demo-reset.ts",
+    "e2e": "tsx scripts/e2e.ts"
   },
   "dependencies": {
     "@fastify/cors": "^11.4.3",

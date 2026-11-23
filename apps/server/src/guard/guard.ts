@@ -225,7 +225,7 @@ export class Guard {
       riskTier: tier, tainted: result.tainted,
       decision: result.decision === "skip" ? "skipped" : result.decision,
       decisionReason: result.reason, status,
-      guardJson: JSON.stringify({ ...result, taint: result.taint.map(({ trace: _t, ...rest }) => rest) }),
+      guardJson: JSON.stringify({ ...result, taint: result.taint.map(({ trace, ...rest }) => ({ ...rest, origins: trace.untrusted })) }),
     }).run();
     audit(this.db, { event: "proposed", actor: "agent", runId: call.runId, actionId, detail: { tool: call.tool, args: result.args, obligationId: call.obligationId, preview: result.preview } });
     audit(this.db, { event: result.decision === "skip" ? "skipped" : "decision", actor: "guard", runId: call.runId, actionId, detail: { decision: result.decision, rule: result.rule, reason: result.reason, tainted: result.tainted, warnings: result.warnings, checks: result.checks } });

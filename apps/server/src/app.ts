@@ -33,7 +33,18 @@ const modeInfo = (db: Db) => {
 
 export function buildApp({ config, db, mcp, llm, llmError, services, google }: AppDeps) {
   const app = Fastify({ logger: process.env.NODE_ENV !== "test" });
-  app.register(cors, { origin: true });
+  // Local single-user app: only the Munshi web UI may call the API from a browser. This blocks other websites
+  // (CSRF, e.g. a page that POSTs /api/actions/:id/approve) and DNS-rebinding attempts.
+  const allowedOrigins = new Set([config.WEB_ORIGIN, `http://localhost:${config.PORT}`, `http://127.0.0.1:${config.PORT}`, "http://127.0.0.1:5173"]);
+  app.register(cors, { origin: [...allowedOrigins] });
+  app.addHook("onRequest", async (req, reply) => {
+    const host = (req.headers.host ?? "").replace(/:\d+$/, "");
+    if (host && !["localhost", "127.0.0.1", "[::1]"].includes(host)) return reply.code(403).send({ error: "Forbidden host" });
+    const origin = req.headers.origin;
+    if (req.method !== "GET" && req.method !== "OPTIONS" && origin && !allowedOrigins.has(origin)) {
+      return reply.code(403).send({ error: "Cross-origin request blocked" });
+    }
+  });
 
   app.get("/api/health", async () => ({
     ok: true,

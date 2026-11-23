@@ -26,7 +26,7 @@ export function serializeAction(a: ActionRow) {
     id: a.id, runId: a.runId, obligationId: a.obligationId, tool: a.tool, tier: a.riskTier,
     args: json(a.argsJson), tainted: a.tainted, decision: a.decision, reason: a.decisionReason, rule: g.rule ?? null,
     status: a.status, preview: g.preview ?? null, warnings: (g.warnings ?? []) as string[],
-    taint: ((g.taint ?? []) as { arg: string; value: string; trusted: boolean; allowlisted: boolean; explanation: string }[]),
+    taint: ((g.taint ?? []) as { arg: string; value: string; trusted: boolean; allowlisted: boolean; explanation: string; origins?: { kind: string; emailId: string | null; sender: string | null; subject: string | null; hidden: boolean }[] }[]),
     holdUntil: a.holdUntil, result: json(a.resultJson), verify: json(a.verifyJson), createdAt: a.createdAt,
     canUndo: undoable,
     undoHint: a.status === "held" ? "Cancel send" : undoable ? "Undo" : a.tool === "send_email" && a.status !== "undone" ? "Already sent; can't be undone" : null,
@@ -87,6 +87,26 @@ export function registerAgentRoutes(app: FastifyInstance, db: Db, services: Serv
   app.post("/api/actions/:id/undo", async (req) => {
     const { id } = z.object({ id: z.string() }).parse(req.params);
     return { action: serializeAction(await exec().undo(id)) };
+  });
+
+  /**
+   * Security view: every blocked or tainted action with the exact rule that fired and the email that introduced the value,
+   * plus every email where hidden content / injection phrasing / rejected extractor output was detected.
+   */
+  app.get("/api/security", async () => {
+    const rows = db.select().from(schema.actions).orderBy(desc(schema.actions.createdAt)).limit(500).all();
+    const actions = rows.filter((a) => a.decision === "block" || a.tainted).map((a) => {
+      const s = serializeAction(a);
+      const sources = new Map<string, { emailId: string | null; sender: string | null; subject: string | null; hidden: boolean; value: string }>();
+      for (const t of s.taint) for (const o of t.origins ?? []) sources.set(`${o.emailId}|${t.value}`, { emailId: o.emailId, sender: o.sender, subject: o.subject, hidden: o.hidden, value: t.value });
+      return { ...s, sources: [...sources.values()] };
+    });
+    const emails = db.select().from(schema.emails).all().flatMap((e) => {
+      const f = json(e.securityFlagsJson);
+      if (!f || !(f.hiddenContent?.length || f.injectionSuspected?.length || f.rejectedObligations?.length)) return [];
+      return [{ id: e.id, from: e.fromAddr, subject: e.subject, source: e.source, flags: f }];
+    });
+    return { actions, emails };
   });
 
   app.get("/api/audit", async (req) => {

@@ -4,15 +4,17 @@ import { Banner, usePoll } from "./components";
 import ModeControl, { ModeBadge } from "./ModeControl";
 import Activity from "./pages/Activity";
 import Approvals from "./pages/Approvals";
-import Inbox from "./pages/Inbox";
+import Inbox, { EmailDrawer } from "./pages/Inbox";
+import Security from "./pages/Security";
 import Policies from "./pages/Policies";
 
-type Page = "inbox" | "approvals" | "activity" | "policies";
+type Page = "inbox" | "approvals" | "activity" | "security" | "policies";
 
 const TABS: { id: Page; label: string }[] = [
   { id: "inbox", label: "Inbox" },
   { id: "approvals", label: "Approvals" },
   { id: "activity", label: "Activity" },
+  { id: "security", label: "Security" },
   { id: "policies", label: "Policies" },
 ];
 
@@ -20,6 +22,7 @@ export default function App() {
   const [health, setHealth] = useState<Health | null>(null);
   const [offline, setOffline] = useState(false);
   const [page, setPage] = useState<Page>("inbox");
+  const [openEmail, setOpenEmail] = useState<string | null>(null);
   const [actions, setActions] = useState<Action[]>([]);
   const refreshActions = async () => setActions(await api2.actions());
   usePoll(refreshActions, 2000);
@@ -81,7 +84,9 @@ export default function App() {
         {page === "inbox" && <Inbox health={health} onActionsChange={() => void refreshActions()} goToApprovals={() => setPage("approvals")} />}
         {page === "approvals" && <Approvals pending={pending} refresh={() => void refreshActions()} />}
         {page === "activity" && <Activity actions={actions} refresh={() => void refreshActions()} />}
+        {page === "security" && <Security onOpenEmail={setOpenEmail} />}
         {page === "policies" && <Policies />}
+        {openEmail && <EmailDrawer id={openEmail} onClose={() => setOpenEmail(null)} />}
       </main>
     </div>
   );

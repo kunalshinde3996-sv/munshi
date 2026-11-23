@@ -122,7 +122,11 @@ export type AuditEntry = { id: number; ts: number; runId: string | null; actionI
 const post = <T,>(path: string, body?: unknown) =>
   req<T>(path, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body ?? {}) });
 
+export type SecurityAction = Action & { sources: { emailId: string | null; sender: string | null; subject: string | null; hidden: boolean; value: string }[] };
+export type SecurityEmail = { id: string; from: string; subject: string; source: string; flags: SecurityFlags };
+
 export const api2 = {
+  security: () => req<{ actions: SecurityAction[]; emails: SecurityEmail[] }>("/api/security"),
   startRun: (goal: string) => post<{ runId: string }>("/api/runs", { goal }),
   run: (id: string) => req<RunDetail>(`/api/runs/${id}`),
   actions: (status?: string) => req<{ actions: Action[] }>(`/api/actions${status ? `?status=${status}` : ""}`).then((r) => r.actions),
