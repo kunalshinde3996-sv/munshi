@@ -205,7 +205,7 @@ export class GoogleConnection {
   async setMode(mode: Mode, opts: { force?: boolean } = {}): Promise<Mode> {
     if (mode === this.getMode()) return mode;
     if (mode === "google") {
-      if (this.cfg.LLM_PROVIDER === "replay") throw new Error("REPLAY MODE only has recordings for SANDBOX DATA. Set LLM_PROVIDER to gemini or anthropic to use a real mailbox.");
+      if (this.cfg.LLM_PROVIDER === "replay") throw new Error("DEMO MODE only has scripted samples for SANDBOX DATA. Set LLM_PROVIDER to gemini or anthropic to use a real mailbox.");
       if (!this.configured) throw new Error(`Google is not configured (missing ${this.missing().join(", ")}).`);
       if (!this.payload()) throw new Error("Connect Google first.");
     }

@@ -19,7 +19,7 @@ Walk-through: [docs/DEMO_SCRIPT.md](docs/DEMO_SCRIPT.md) (2 minutes, click by cl
 Requires Node 20+. The whole app runs on **SANDBOX DATA** with no Google account.
 
 1. `npm install`
-2. `cp .env.example .env` (Windows: `copy .env.example .env`). The default is `LLM_PROVIDER=replay`: recorded outputs, no API key, with a visible **REPLAY MODE — recorded outputs, not live AI** banner. For live AI set `LLM_PROVIDER=gemini` + `LLM_MODEL` + `GEMINI_API_KEY` (or `anthropic` + `ANTHROPIC_API_KEY`). Optional: `LLM_FALLBACK_MODEL`.
+2. `cp .env.example .env` (Windows: `copy .env.example .env`). The default is `LLM_PROVIDER=replay`: recorded outputs, no API key, with a visible **DEMO MODE — scripted sample outputs, not live AI** banner. For live AI set `LLM_PROVIDER=gemini` + `LLM_MODEL` + `GEMINI_API_KEY` (or `anthropic` + `ANTHROPIC_API_KEY`). Optional: `LLM_FALLBACK_MODEL`.
 3. `npm run demo:reset`
 4. `npm run dev:server` (API on :8787) and, in a second terminal, `npm run dev:web` (UI on :5173)
 5. Open http://localhost:5173, press **Try sandbox**, then **Scan inbox**, then **Handle these**.

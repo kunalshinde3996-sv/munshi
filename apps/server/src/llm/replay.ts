@@ -6,10 +6,10 @@ import { LlmError, type LlmAdapter, type LlmRequest } from "./types.js";
 
 /**
  * LLM_PROVIDER=replay: recorded extractor + agent outputs from fixtures/replay/recording.json, so the whole sandbox flow
- * works with no API key. These are NOT live AI. The UI shows a REPLAY MODE banner whenever this provider is active.
+ * works with no API key. These are NOT live AI. The UI shows a DEMO MODE banner whenever this provider is active.
  * The recorded outputs go through exactly the same validation, vetting and Guard as live model output.
  */
-export const REPLAY_BANNER = "REPLAY MODE — recorded outputs, not live AI";
+export const REPLAY_BANNER = "DEMO MODE — scripted sample outputs, not live AI";
 
 interface Recording {
   extractor: { fromAddress: string; response: unknown }[];

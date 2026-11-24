@@ -148,7 +148,7 @@ Every tool declares: `riskTier`, `reversible`, `undoTool?`, `verifyTool?`, `sens
 ## Replay provider
 - `LLM_PROVIDER=replay` (llm/replay.ts, fixtures/replay/recording.json): ReplayLlm (extractor, keyed by sender address) + ReplayAgent (first step proposes the recorded plan per obligation, later steps summarise). No key, no model id, no network. `{{date:N}}` placeholders keep dates relative to today. Unknown senders get `{"obligations":[]}`.
 - The recording is AUTHORED to match the sandbox fixtures, not captured from a live model. Its output goes through the same schema check, vetting and Guard as live output.
-- `/api/health` returns `replay` + `replayBanner`; the web app shows a sticky "REPLAY MODE — recorded outputs, not live AI" banner on every screen incl. onboarding. Switching to Google mode is refused while replaying. Telegram messages carry no replay marker (Telegram is optional and off by default).
+- `/api/health` returns `replay` + `replayBanner`; the web app shows a sticky "DEMO MODE — scripted sample outputs, not live AI" banner on every screen incl. onboarding. Switching to Google mode is refused while replaying. Telegram messages carry no replay marker (Telegram is optional and off by default).
 
 ## Seed policies
 Never auto-send email; block tainted send_email to non-allowlisted recipients;
