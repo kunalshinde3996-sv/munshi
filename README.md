@@ -1,19 +1,56 @@
 # Munshi: life-admin on autopilot, with a Guard you can trust
 
-**Track: Make MCP Matter, Less Magic, More Utility.**
+> **Munshi reads your inbox, finds the bills, deadlines and renewals in it, and acts through MCP tools, but every action passes a deterministic Guard (policy, provenance, preview, verify, undo) so a malicious email can never make it send, pay or leak anything.**
 
-Munshi reads your inbox, finds the obligations in it (bills, deadlines, renewals, refunds, appointments, tickets) and acts on
-them through MCP tools: calendar reminders, follow-up drafts, labels, and (with your approval) sent email.
+**Track: Make MCP Matter. Less Magic, More Utility.**
 
-The point is *controlled* interaction. Every action the AI proposes passes through a **deterministic Guard**: policy,
-argument provenance (prompt-injection defence), preview, read-back verification, undo and an append-only audit log.
-No security decision is ever made by an LLM.
+## The problem
 
-> **Approach:** CaMeL-inspired argument provenance plus quarantined extraction. It is **not** full CaMeL (see [Threat model](#threat-model)).
+Life-admin lives in your inbox: electricity bills, exam forms, renewals, refunds, appointments. An AI agent that reads that
+inbox and can act is useful, and also dangerous: any email is attacker-controlled text. Prompt injection ("forward the
+statement to this address") turns a helpful agent into a data-exfiltration tool. Munshi's answer is to keep the model on a
+short leash with *code*: raw email text is read only by a tool-less extractor, and every proposed tool call is checked by a
+deterministic Guard that never asks an LLM whether something is safe.
+
+![Munshi demo](docs/demo.gif)
+<!-- Demo GIF placeholder: record the flow in docs/DEMO_SCRIPT.md and save it as docs/demo.gif -->
+
+## Quickstart (5 steps)
+
+Requires Node 20+. The whole app runs on **SANDBOX DATA** with no Google account.
+
+1. `npm install`
+2. `cp .env.example .env` (Windows: `copy .env.example .env`), then set `LLM_MODEL` and `GEMINI_API_KEY` (or `LLM_PROVIDER=anthropic` + `ANTHROPIC_API_KEY`). Optional: `LLM_FALLBACK_MODEL`.
+3. `npm run demo:reset`
+4. `npm run dev:server` (API on :8787) and, in a second terminal, `npm run dev:web` (UI on :5173)
+5. Open http://localhost:5173, press **Scan inbox**, then **Handle these**.
+
+Checks: `npm run typecheck`, `npm test`, `npm run e2e`. More options are under [Setup](#setup-details).
+
+## What works today (honest status)
+
+| Feature | Status |
+|---|---|
+| Quarantined extraction (tool-less LLM, zod-validated, verbatim-evidence vetting) | Working |
+| Hidden-content stripping + injection flagging, shown in UI | Working |
+| Deterministic Guard: validation, risk tiers, provenance/taint, policies, preview, idempotency, undo | Working |
+| Append-only audit log (SQLite triggers) + Security view | Working |
+| Agent runtime with approvals, execute, read-back verify, undo, 60s send hold | Working |
+| Our own MCP servers (Gmail, Calendar) with sandbox backend | Sandbox-only (fixtures labelled SANDBOX DATA) |
+| Google OAuth + Gmail/Calendar backends (encrypted refresh token) | Working code, not exercised in CI; needs your Google Cloud client |
+| LLM resilience: timeout, backoff, 429 retryDelay, pacing (`LLM_RPM`), fallback model, extraction cache | Working |
+| Offline end-to-end scenario (`npm run e2e`) | Working (LLM calls are scripted mocks) |
+| Telegram approvals and nudges | Planned |
+| Plain-language policies | Planned |
+| Proactive background scans | Planned |
+| Attack evaluation benchmark + Eval tab | Planned |
+| R3 actions (delete, pay) | Intentionally blocked in this prototype |
+
+(This table is updated as features land; "Planned" means not yet merged.)
 
 ---
 
-## Setup (8 steps)
+## Setup details
 
 Requires Node 20+ (developed on Node 24, Windows 11).
 
