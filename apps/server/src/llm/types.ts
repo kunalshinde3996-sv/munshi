@@ -55,6 +55,17 @@ export const defaultNet: NetOptions = {
 };
 
 const RETRYABLE_STATUS = new Set([429, 503]);
+const TRANSIENT_NET = /fetch failed|ECONNRESET|ETIMEDOUT/;
+
+/** Node's fetch throws `TypeError: fetch failed` with the socket error (ECONNRESET, ETIMEDOUT, ...) in `cause`. */
+export function isTransientNetworkError(e: unknown): boolean {
+  const parts: string[] = [];
+  for (let x: unknown = e, depth = 0; x && depth < 4; x = (x as { cause?: unknown }).cause, depth++) {
+    const err = x as { message?: unknown; code?: unknown };
+    parts.push(String(err.message ?? ""), String(err.code ?? ""));
+  }
+  return TRANSIENT_NET.test(parts.join(" "));
+}
 
 async function postOnce(fetchFn: FetchLike, url: string, headers: Record<string, string>, body: unknown, timeoutMs: number) {
   const ac = new AbortController();
@@ -76,7 +87,7 @@ async function postOnce(fetchFn: FetchLike, url: string, headers: Record<string,
       text = await res.text();
     } catch (e) {
       if (timedOut) throw new LlmError(`LLM request timed out after ${timeoutMs}ms`, false, undefined, true);
-      throw new LlmError(`Network error calling LLM: ${e instanceof Error ? e.message : String(e)}`);
+      throw new LlmError(`Network error calling LLM: ${e instanceof Error ? e.message : String(e)}`, false, undefined, isTransientNetworkError(e));
     }
     if (!res.ok) {
       const fatal = [400, 401, 403, 404].includes(res.status);
@@ -108,7 +119,7 @@ export async function postJson(
     } catch (e) {
       if (!(e instanceof LlmError) || !e.retryable || attempt >= o.attempts) throw e;
       const delay = o.baseDelayMs * 2 ** (attempt - 1);
-      o.log(`[llm] ${label}: attempt ${attempt}/${o.attempts} failed (${e.status ?? "timeout"}); retrying in ${delay}ms`);
+      o.log(`[llm] ${label}: attempt ${attempt}/${o.attempts} failed (${e.status ?? "timeout/network"}); retrying in ${delay}ms`);
       await o.sleep(delay);
     }
   }
@@ -130,7 +141,7 @@ async function withFallback<T extends { provider: string; model: string }, R>(
       lastErr = e;
       const next = candidates[i + 1];
       if (!next || !(e instanceof LlmError) || !e.retryable) throw e;
-      log(`[llm] ${c.provider}/${c.model} unavailable after retries (${e.status ?? "timeout"}); falling back to ${next.model}`);
+      log(`[llm] ${c.provider}/${c.model} unavailable after retries (${e.status ?? "timeout/network"}); falling back to ${next.model}`);
     }
   }
   throw lastErr;

@@ -90,6 +90,27 @@ describe("LLM adapters", () => {
       expect(g.urls).toHaveLength(1);
     });
 
+    it("retries transient network errors (fetch failed, ECONNRESET, ETIMEDOUT) but not other network errors", async () => {
+      const mk = (errs: Error[]) => {
+        let i = 0;
+        const fn: FetchLike = async () => {
+          const e = errs[i++];
+          if (e) throw e;
+          return { ok: true, status: 200, text: async () => JSON.stringify(ok) };
+        };
+        return { fn, count: () => i };
+      };
+      const withCause = (code: string) => Object.assign(new TypeError("fetch failed"), { cause: Object.assign(new Error("boom"), { code }) });
+      const f = mk([withCause("ECONNRESET"), new Error("read ETIMEDOUT"), new TypeError("fetch failed")]);
+      await expect(new GeminiAdapter("m", "k", f.fn, quiet).complete({ system: "", user: "" })).rejects.toMatchObject({ retryable: true });
+      expect(f.count()).toBe(3);
+      const g = mk([withCause("ECONNRESET")]);
+      await expect(new GeminiAdapter("m", "k", g.fn, quiet).complete({ system: "", user: "" })).resolves.toBe("hi");
+      const h = mk([new Error("invalid URL")]);
+      await expect(new GeminiAdapter("m", "k", h.fn, quiet).complete({ system: "", user: "" })).rejects.toMatchObject({ retryable: false });
+      expect(h.count()).toBe(1);
+    });
+
     it("aborts a hung request after the timeout and retries it", async () => {
       const f = scripted(["hang", "hang", "hang"]);
       const a = new GeminiAdapter("m", "k", f.fn, { ...quiet, timeoutMs: 10 });
