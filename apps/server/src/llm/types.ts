@@ -181,30 +181,46 @@ export async function postJson(
 export interface FallbackOptions {
   log: (msg: string) => void;
   sleep: (ms: number) => Promise<void>;
+  now: () => number;
 }
+
+/** model key -> epoch ms until which it is known to be over quota (server told us to wait longer than MAX_QUOTA_WAIT_MS). */
+const cooldowns = new Map<string, number>();
+export const clearLlmCooldowns = () => cooldowns.clear();
 
 /**
  * Primary model first. After its own retries, a retryable failure or a 429 quota error moves to the fallback ONCE.
- * On a 429 the server's retryDelay is honoured first (when <= MAX_QUOTA_WAIT_MS). With no fallback configured,
- * a quota error earns one more try on the same model after that wait; transient errors do not.
+ * On a 429 the server's retryDelay is honoured first (when <= MAX_QUOTA_WAIT_MS). A longer hint (daily quota) puts that
+ * model on cooldown so later calls skip it instead of burning requests; when every model is cooling down the call fails
+ * fast with a fatal error (a scan aborts with the reason). With no fallback configured, a short quota error earns one
+ * more try on the same model after the wait; transient errors do not.
  */
 export async function withFallback<T extends { provider: string; model: string }, R>(
   candidates: T[],
   call: (c: T) => Promise<R>,
   opts: Partial<FallbackOptions> = {},
 ): Promise<R> {
-  const { log, sleep } = { log: defaultNet.log, sleep: defaultNet.sleep, ...opts };
+  const { log, sleep, now } = { log: defaultNet.log, sleep: defaultNet.sleep, now: Date.now, ...opts };
+  const key = (c: T) => `${c.provider}/${c.model}`;
+  const coolUntil = (c: T) => {
+    const t = cooldowns.get(key(c));
+    return t !== undefined && t > now() ? t : undefined;
+  };
   const single = candidates.length === 1;
   const order = single ? [candidates[0]!, candidates[0]!] : candidates;
   let lastErr: unknown;
   for (const [i, c] of order.entries()) {
+    if (coolUntil(c) !== undefined) continue;
     try {
       const out = await call(c);
-      log(`[llm] answered by ${c.provider}/${c.model}${i > 0 && !single ? " (fallback)" : ""}`);
+      log(`[llm] answered by ${key(c)}${i > 0 && !single ? " (fallback)" : ""}`);
       return out;
     } catch (e) {
       lastErr = e;
       const next = order[i + 1];
+      if (e instanceof LlmError && e.quota && e.retryAfterMs !== undefined && e.retryAfterMs > MAX_QUOTA_WAIT_MS) {
+        cooldowns.set(key(c), now() + e.retryAfterMs);
+      }
       if (!next || !(e instanceof LlmError) || !(e.retryable || e.quota)) throw e;
       if (single && !e.quota) throw e;
       if (e.quota) {
@@ -212,12 +228,21 @@ export async function withFallback<T extends { provider: string; model: string }
         const wait = hint !== undefined && hint <= MAX_QUOTA_WAIT_MS ? hint : 0;
         const hintText = hint !== undefined ? `${Math.round(hint / 1000)}s` : "unknown";
         const waitText = wait ? `waiting ${Math.round(wait / 1000)}s then ` : "";
-        log(`[llm] ${c.provider}/${c.model} quota 429 (server retryDelay ${hintText}); ${waitText}${single ? "retrying once" : `falling back to ${next.model}`}`);
+        log(`[llm] ${key(c)} quota 429 (server retryDelay ${hintText}); ${waitText}${single ? "retrying once" : `falling back to ${next.model}`}`);
         if (wait) await sleep(wait);
       } else {
-        log(`[llm] ${c.provider}/${c.model} unavailable after retries (${e.status ?? "timeout/network"}); falling back to ${next.model}`);
+        log(`[llm] ${key(c)} unavailable after retries (${e.status ?? "timeout/network"}); falling back to ${next.model}`);
       }
     }
+  }
+  const untils = candidates.map(coolUntil);
+  if (untils.every((u) => u !== undefined)) {
+    const until = new Date(Math.min(...(untils as number[])));
+    throw new LlmError(
+      `All configured LLM models are over quota until about ${until.toLocaleTimeString()} (${candidates.map(key).join(", ")}). ` +
+        "Wait for the quota to reset, enable billing, or use another API key.",
+      true, 429, false, true, Math.min(...(untils as number[])) - now(),
+    );
   }
   throw lastErr;
 }

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { loadConfig } from "../src/config.js";
-import { AnthropicAdapter, createLlm, FallbackLlm, GeminiAdapter, LlmError, Pacer, parseRetryDelayMs, type FetchLike } from "../src/llm/index.js";
+import { AnthropicAdapter, clearLlmCooldowns, createLlm, FallbackLlm, GeminiAdapter, LlmError, Pacer, parseRetryDelayMs, type FetchLike } from "../src/llm/index.js";
 
 function fakeFetch(status: number, body: unknown) {
   const calls: { url: string; headers: Record<string, string>; body: any }[] = [];
@@ -167,6 +167,22 @@ describe("LLM adapters", () => {
       await expect(single.complete({ system: "", user: "" })).resolves.toBe("hi");
       expect(sl).toEqual([4_000]);
       expect(g.urls).toHaveLength(2);
+    });
+
+    it("daily-quota cooldown: a model told to wait for hours is skipped afterwards; all cooled -> fatal fail-fast", async () => {
+      clearLlmCooldowns();
+      let t = 1_000_000;
+      const f = quotaThen([quota429("7000s")]);
+      const mk = () => ["p", "b"].map((m) => new GeminiAdapter(m, "k", f.fn, quiet));
+      const llm = new FallbackLlm(mk(), { log: () => {}, sleep: async () => {}, now: () => t });
+      await expect(llm.complete({ system: "", user: "" })).rejects.toMatchObject({ quota: true }); // both hit, both cooled
+      expect(f.urls).toHaveLength(2);
+      await expect(llm.complete({ system: "", user: "" })).rejects.toMatchObject({ fatal: true, quota: true, message: expect.stringContaining("over quota") });
+      expect(f.urls).toHaveLength(2); // no further requests were made
+      t += 7_100_000; // cooldown elapsed -> tries again
+      await expect(llm.complete({ system: "", user: "" })).rejects.toMatchObject({ quota: true });
+      expect(f.urls.length).toBeGreaterThan(2);
+      clearLlmCooldowns();
     });
 
     it("Pacer spaces requests 60/rpm seconds apart (and is off at rpm 0)", async () => {

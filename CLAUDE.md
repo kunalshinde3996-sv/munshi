@@ -66,7 +66,7 @@ Every tool declares: `riskTier`, `reversible`, `undoTool?`, `verifyTool?`, `sens
 - Fatal LLM errors (401/403/404/400) abort the scan; other errors fail only that email.
 - LLM calls (`llm/types.ts`): 30s AbortController timeout; 3 attempts with exponential backoff on 503/timeout/transient network errors
   (fetch failed, ECONNRESET, ETIMEDOUT). A 429 is NEVER retried in place: its server `retryDelay` is parsed, honoured (if <= 60s), then the
-  call moves to `LLM_FALLBACK_MODEL` exactly once (no fallback configured -> one retry on the same model). All calls are paced by a shared
+  call moves to `LLM_FALLBACK_MODEL` exactly once (no fallback configured -> one retry on the same model). A hint > 60s (daily quota) puts that model on cooldown; if all models are cooling down the call fails fast with a fatal error so a scan aborts with the reason instead of burning requests. All calls are paced by a shared
   `LLM_RPM` budget (default 8, 0 = off). The answering model is logged (`[llm] answered by ...`).
 - Extraction cache: `emails.content_hash` = sha256(model, sender, subject, sanitized body) + `extraction_model`. A scan skips emails whose
   status is `done` and hash matches; failed ones are retried; "Re-scan all" (`force`) ignores the cache.
