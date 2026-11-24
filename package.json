@@ -11,6 +11,7 @@
     "node": ">=20"
   },
   "scripts": {
+    "dev": "node scripts/dev.mjs",
     "dev:server": "npm run dev -w @munshi/server",
     "dev:web": "npm run dev -w @munshi/web",
     "typecheck": "npm run typecheck --workspaces --if-present",
@@ -21,6 +22,11 @@
     "e2e": "npm run e2e -w @munshi/server",
     "eval:attacks": "npm run eval:attacks -w @munshi/server --",
     "agent:live": "npm run agent:live -w @munshi/server",
-    "check:sqlite": "node scripts/check-sqlite.mjs"
+    "check:sqlite": "node scripts/check-sqlite.mjs",
+    "screenshots": "node scripts/screenshots.mjs",
+    "check:readme": "node scripts/check-readme.mjs"
+  },
+  "devDependencies": {
+    "playwright": "^1.65.1"
   }
 }

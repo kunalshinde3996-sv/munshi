@@ -156,6 +156,10 @@ Every tool declares: `riskTier`, `reversible`, `undoTool?`, `verifyTool?`, `sens
 - `POST /api/auth/demo-login`: passwordless login of the seeded demo user, only when `LLM_PROVIDER=replay` and the demo user exists (else 403); shares the login rate limit; audit `login` detail `method: demo_account`. `/api/health.demoLogin` drives the "Use demo account" button; the password never reaches the client.
 - Tests: `withSession(app, db)` (test/helpers.ts) gives an app a real session row + cookie on `app.inject`; e2e does a real login. Web: `App` is the auth gate (`Login.tsx`), any 401 returns to login, onboarding flag is per user email.
 
+## README, screenshots, dev
+- `npm run dev` (scripts/dev.mjs) runs API + web. `npm run screenshots` (scripts/screenshots.mjs, Playwright chromium, demo mode) regenerates docs/screenshots/01..10 after demo:reset; fails if any image is tiny. `npm run check:readme` verifies README paths/scripts/env vars/tool names/links. The README's EVAL block is rewritten by `eval:attacks` (keep the markers).
+- README honesty rules: numbers only from docs/eval-results.md; demo mode outputs are hand-written (not captured); live Gemini/Google/Telegram are untested live.
+
 ## Resilience
 - `crash-log.ts`: `installCrashHandlers` (index.ts) logs unhandledRejection/uncaughtException to console + `<db dir>/server-error.log` and keeps running; >20 in a minute exits(1). Route error handler (routes.ts) returns `{error}` JSON for every failure (4xx keep their status, others 500 "Internal error: ..."), logs the stack. An agent run failure is recorded as run status `failed` (never escapes the background task).
 
