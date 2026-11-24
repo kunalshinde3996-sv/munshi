@@ -89,7 +89,7 @@ export class GoogleConnection {
   authProblem: string | null = null;
 
   constructor(
-    private readonly cfg: Pick<Config, "GOOGLE_CLIENT_ID" | "GOOGLE_CLIENT_SECRET" | "GOOGLE_REDIRECT_URI" | "TOKEN_ENCRYPTION_KEY" | "WEB_ORIGIN" | "SANDBOX_STORE_DIR"> & Partial<Pick<Config, "SANDBOX_ATTACK_EMAILS">>,
+    private readonly cfg: Pick<Config, "GOOGLE_CLIENT_ID" | "GOOGLE_CLIENT_SECRET" | "GOOGLE_REDIRECT_URI" | "TOKEN_ENCRYPTION_KEY" | "WEB_ORIGIN" | "SANDBOX_STORE_DIR"> & Partial<Pick<Config, "SANDBOX_ATTACK_EMAILS" | "LLM_PROVIDER">>,
     private readonly db: Db,
     private readonly hub: ModeSwitcher,
     private readonly provider?: OAuthProvider,
@@ -205,6 +205,7 @@ export class GoogleConnection {
   async setMode(mode: Mode, opts: { force?: boolean } = {}): Promise<Mode> {
     if (mode === this.getMode()) return mode;
     if (mode === "google") {
+      if (this.cfg.LLM_PROVIDER === "replay") throw new Error("REPLAY MODE only has recordings for SANDBOX DATA. Set LLM_PROVIDER to gemini or anthropic to use a real mailbox.");
       if (!this.configured) throw new Error(`Google is not configured (missing ${this.missing().join(", ")}).`);
       if (!this.payload()) throw new Error("Connect Google first.");
     }

@@ -50,6 +50,7 @@ export default function Onboarding({ health, offline, onStart }: { health: Healt
           <b>SANDBOX DATA:</b> the demo mailbox is fictional and includes prompt-injection emails so you can watch the Guard stop them. No Google account is needed.
         </p>
         {offline && <Banner tone="red">Cannot reach the server. Start it with <code>npm run dev:server</code>.</Banner>}
+        {health?.replay && <Banner tone="amber">Replay mode: scan and agent results come from a recording, not a live model. No API key needed.</Banner>}
         {health && !health.llmConfigured && <Banner tone="amber">LLM not configured ({health.llmError}). You can look around, but scanning needs a key in <code>.env</code>.</Banner>}
         {err && <Banner tone="red">{err}</Banner>}
         <button

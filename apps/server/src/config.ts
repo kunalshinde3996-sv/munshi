@@ -9,6 +9,9 @@ loadDotenv({ path: resolve(dirname(fileURLToPath(import.meta.url)), "../../../.e
 /** Evaluation fixtures (20 injection + 10 benign-but-suspicious emails), also used by `npm run eval:attacks`. */
 export const ATTACK_FIXTURES_DIR = resolve(dirname(fileURLToPath(import.meta.url)), "../../../fixtures/attacks");
 
+/** Recorded extractor + agent outputs used when LLM_PROVIDER=replay. */
+export const REPLAY_RECORDING_PATH = resolve(dirname(fileURLToPath(import.meta.url)), "../../../fixtures/replay/recording.json");
+
 export const EVAL_RESULTS_PATH = resolve(dirname(fileURLToPath(import.meta.url)), "../../../docs/eval-results.json");
 
 const Env = z.object({
@@ -17,7 +20,7 @@ const Env = z.object({
   SANDBOX_STORE_DIR: z.string().default("./data/sandbox"),
   /** Add the 30 attack/benign evaluation emails (fixtures/attacks) to the SANDBOX mailbox. */
   SANDBOX_ATTACK_EMAILS: z.string().default("true").transform((v) => !["false", "0", "off", "no"].includes(v.trim().toLowerCase())),
-  LLM_PROVIDER: z.enum(["gemini", "anthropic"]).default("gemini"),
+  LLM_PROVIDER: z.enum(["gemini", "anthropic", "replay"]).default("gemini"),
   LLM_MODEL: z.string().optional(),
   LLM_FALLBACK_MODEL: z.string().optional(),
   /** Max LLM requests per minute across extractor + agent (0 disables pacing). */

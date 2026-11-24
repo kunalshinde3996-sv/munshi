@@ -2,6 +2,8 @@ export type Health = {
   ok: boolean;
   mode: "sandbox" | "google";
   llmProvider: string;
+  replay?: boolean;
+  replayBanner?: string | null;
   llmConfigured: boolean;
   llmModel: string | null;
   llmError: string | null;

@@ -5,6 +5,7 @@ import type { Config } from "./config.js";
 import type { Db } from "./db/index.js";
 import { schema } from "./db/index.js";
 import { sanitizeEmailBody } from "./extraction/sanitize.js";
+import { REPLAY_BANNER } from "./llm/replay.js";
 import { LlmError, type LlmAdapter } from "./llm/types.js";
 import { GoogleAuthToolError, type McpHub } from "./mcp/hub.js";
 import { registerAgentRoutes } from "./routes.js";
@@ -58,6 +59,8 @@ export function buildApp({ config, db, mcp, llm, llmError, services, google, sch
     ok: true,
     service: "munshi-server",
     llmProvider: config.LLM_PROVIDER,
+    replay: config.LLM_PROVIDER === "replay",
+    replayBanner: config.LLM_PROVIDER === "replay" ? REPLAY_BANNER : null,
     llmConfigured: Boolean(llm),
     llmModel: llm?.model ?? null,
     agentAvailable: Boolean(services?.runtime),

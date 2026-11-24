@@ -125,3 +125,13 @@ export function Spinner({ label = "Loading…" }: { label?: string }) {
     </p>
   );
 }
+
+/** Shown on every screen (incl. onboarding) while LLM_PROVIDER=replay: outputs come from a recording, not a live model. */
+export function ReplayBanner({ health }: { health: { replay?: boolean; replayBanner?: string | null } | null }) {
+  if (!health?.replay) return null;
+  return (
+    <div role="status" className="sticky top-0 z-40 bg-violet-700 px-3 py-1.5 text-center text-xs font-bold tracking-wide text-white">
+      {health.replayBanner ?? "REPLAY MODE — recorded outputs, not live AI"}
+    </div>
+  );
+}

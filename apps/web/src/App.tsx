@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { api, api2, type Action, type Health } from "./api";
-import { Banner, Logo, Toaster, usePoll } from "./components";
+import { Banner, Logo, ReplayBanner, Toaster, usePoll } from "./components";
 import Onboarding from "./Onboarding";
 import ModeControl, { ModeBadge } from "./ModeControl";
 import Activity from "./pages/Activity";
@@ -48,6 +48,7 @@ export default function App() {
   if (!welcomed) {
     return (
       <>
+        <ReplayBanner health={health} />
         <Onboarding
           health={health}
           offline={offline}
@@ -61,6 +62,7 @@ export default function App() {
   return (
     <div className="min-h-screen">
       <Toaster />
+      <ReplayBanner health={health} />
       <header className="border-b border-stone-200 bg-white">
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-4 py-3">
           <div className="flex items-center gap-2">

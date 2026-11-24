@@ -1,0 +1,37 @@
+{
+  "_about": "Recorded-format outputs for LLM_PROVIDER=replay. AUTHORED to match the SANDBOX DATA fixtures in packages/mcp-gmail (they were not captured from a live model). {{date:N}} = N days from today, IST, because sandbox fixture dates are generated relative to today. An email with no entry gets {\"obligations\":[]}.",
+  "extractor": [
+    { "fromAddress": "billing@bescom.example",
+      "response": { "obligations": [ { "type": "bill", "title": "BESCOM electricity bill", "dueDate": "{{date:5}}", "amount": 1847, "currency": "INR", "counterparty": "BESCOM", "confidence": 0.95, "evidenceQuote": "Amount payable: Rs 1,847.00" } ] } },
+    { "fromAddress": "billing@actfibernet.example",
+      "response": { "obligations": [ { "type": "bill", "title": "ACT Fibernet broadband invoice", "dueDate": "{{date:8}}", "amount": 1179, "currency": "INR", "counterparty": "ACT Fibernet", "confidence": 0.93, "evidenceQuote": "Amount due: Rs 1,179.00 (incl. GST)" } ] } },
+    { "fromAddress": "statements@sahyadribank.example",
+      "response": { "obligations": [ { "type": "bill", "title": "Credit card payment (total due)", "dueDate": "{{date:10}}", "amount": 18432.6, "currency": "INR", "counterparty": "Sahyadri Bank", "confidence": 0.92, "evidenceQuote": "Total amount due: Rs 18,432.60" } ] } },
+    { "fromAddress": "exams@dit-edu.example",
+      "response": { "obligations": [ { "type": "deadline", "title": "Semester 5 examination form", "dueDate": "{{date:6}}", "amount": 1500, "currency": "INR", "counterparty": "Deccan Institute of Technology", "confidence": 0.9, "evidenceQuote": "Examination fee: Rs 1,500" } ] } },
+    { "fromAddress": "refunds@amazon-support.example",
+      "response": { "obligations": [ { "type": "refund", "title": "Amazon refund pending", "dueDate": "{{date:3}}", "amount": 2499, "currency": "INR", "counterparty": "Amazon", "confidence": 0.7, "evidenceQuote": "Refund amount: Rs 2,499.00" } ] } },
+    { "fromAddress": "ticketadmin@irctc.example",
+      "response": { "obligations": [ { "type": "travel", "title": "Train to Chennai (PNR 4523817690)", "dueDate": "{{date:12}}T06:30:00+05:30", "amount": 995, "currency": "INR", "counterparty": "IRCTC", "confidence": 0.9, "evidenceQuote": "Departure: 06:30  Arrival: 11:35" } ] } },
+    { "fromAddress": "info@mailer.netflix-billing.example",
+      "response": { "obligations": [ { "type": "renewal", "title": "Netflix plan renewal", "dueDate": "{{date:4}}", "amount": 649, "currency": "INR", "counterparty": "Netflix", "confidence": 0.9, "evidenceQuote": "Amount: Rs 649.00 per month" } ] } },
+    { "fromAddress": "no-reply@spotify-billing.example",
+      "response": { "obligations": [ { "type": "renewal", "title": "Spotify Premium renewal", "dueDate": "{{date:9}}", "amount": 119, "currency": "INR", "counterparty": "Spotify", "confidence": 0.9, "evidenceQuote": "Amount: Rs 119.00" } ] } },
+    { "fromAddress": "reception@smilecare-dental.example",
+      "response": { "obligations": [ { "type": "appointment", "title": "Dentist appointment (Smile Care)", "dueDate": "{{date:7}}T16:30:00+05:30", "counterparty": "Smile Care Dental Clinic", "confidence": 0.95, "evidenceQuote": "Time: 4:30 PM IST" } ] } }
+  ],
+  "agent": {
+    "_about": "Step 1 plan, per obligation (matched by title substring). $id and $senderAddress come from the obligation list the runtime shows the agent. Later steps reply with finalText.",
+    "plan": [
+      { "titleContains": "BESCOM", "calls": [ { "name": "create_event", "args": { "title": "BESCOM bill due (Rs 1,847)", "start": "{{date:5}}T09:00:00+05:30", "obligationId": "$id" } } ] },
+      { "titleContains": "ACT Fibernet", "calls": [ { "name": "create_event", "args": { "title": "ACT Fibernet invoice due (Rs 1,179)", "start": "{{date:8}}T09:00:00+05:30", "obligationId": "$id" } } ] },
+      { "titleContains": "Credit card", "calls": [ { "name": "create_event", "args": { "title": "Credit card payment due", "start": "{{date:10}}T09:00:00+05:30", "obligationId": "$id" } } ] },
+      { "titleContains": "examination form", "calls": [ { "name": "create_event", "args": { "title": "Submit Semester 5 exam form", "start": "{{date:6}}T09:00:00+05:30", "obligationId": "$id" } } ] },
+      { "titleContains": "Amazon refund", "calls": [
+        { "name": "create_event", "args": { "title": "Check Amazon refund (Rs 2,499)", "start": "{{date:3}}T09:00:00+05:30", "obligationId": "$id" } },
+        { "name": "create_draft", "args": { "to": ["$senderAddress"], "subject": "Where is my refund?", "body": "Hello, my refund of Rs 2,499 for the returned headphones has not arrived yet. Could you please confirm the status?", "obligationId": "$id" } } ] },
+      { "titleContains": "Dentist", "calls": [ { "name": "create_event", "args": { "title": "Dentist appointment (Smile Care)", "start": "{{date:7}}T16:30:00+05:30", "obligationId": "$id" } } ] }
+    ],
+    "finalText": "Done (replayed recording). I proposed reminders for the bills, the exam form and the dentist, and a follow-up draft for the pending refund. See Activity and Approvals."
+  }
+}
