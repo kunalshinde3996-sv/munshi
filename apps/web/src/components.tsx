@@ -126,12 +126,20 @@ export function Spinner({ label = "Loading…" }: { label?: string }) {
   );
 }
 
-/** Shown on every screen (incl. onboarding) while LLM_PROVIDER=replay: outputs come from a recording, not a live model. */
+/** Shown on every screen (incl. onboarding) while LLM_PROVIDER=replay (DEMO MODE): outputs are scripted samples, not a live model. */
+const BANNER_H = 28;
 export function ReplayBanner({ health }: { health: { replay?: boolean; replayBanner?: string | null } | null }) {
   if (!health?.replay) return null;
+  // Inline styles + fixed position: always visible, independent of page height, scrolling or generated CSS.
   return (
-    <div role="status" className="sticky top-0 z-40 bg-violet-700 px-3 py-1.5 text-center text-xs font-bold tracking-wide text-white">
-      {health.replayBanner ?? "DEMO MODE — scripted sample outputs, not live AI"}
-    </div>
+    <>
+      <div
+        role="status"
+        style={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 60, height: BANNER_H, lineHeight: `${BANNER_H}px`, background: "#6d28d9", color: "#fff", textAlign: "center", fontSize: 12, fontWeight: 700, letterSpacing: "0.04em" }}
+      >
+        {health.replayBanner ?? "DEMO MODE — scripted sample outputs, not live AI"}
+      </div>
+      <div aria-hidden style={{ height: BANNER_H }} />
+    </>
   );
 }
