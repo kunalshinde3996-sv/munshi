@@ -4,9 +4,29 @@
 
 *MSRIT Hackathon · Track 1: Make MCP Matter (Less Magic, More Utility)*
 
-![Munshi approvals screen: a draft to an address that came from an email is marked Tainted and needs an explicit acknowledgement](docs/screenshots/06-approvals.png)
+## Screenshots
 
-*The approvals screen in demo mode. The right-hand card is a draft addressed to a value that came from an email, not from the user, so the Guard marks it tainted and will not run it without an explicit acknowledgement. Everything shown is SANDBOX DATA.*
+All captured in demo mode on SANDBOX DATA.
+
+![Inbox with extracted obligations](docs/screenshots/03-inbox-obligations.png)
+
+*Inbox: 15 sandbox emails become obligation cards, each with a confidence score and a verbatim evidence quote.*
+
+![Approvals screen](docs/screenshots/06-approvals.png)
+
+*Approvals: a draft to an address that came from an email is marked Tainted and needs an explicit acknowledgement.*
+
+![Activity with verify and undo](docs/screenshots/07-activity.png)
+
+*Activity: executed actions are read back and verified, and can be undone.*
+
+![Security tab](docs/screenshots/08-security-tab.png)
+
+*Security: every blocked or tainted action, the rule that fired, and the append-only audit log.*
+
+![Attack evaluation tab](docs/screenshots/10-eval.png)
+
+*Eval: results of the 20-injection / 10-benign attack evaluation, rendered from `docs/eval-results.json`.*
 
 ---
 
