@@ -1,4 +1,5 @@
 import { JsonStore, SANDBOX_USER_EMAIL } from "@munshi/mcp-common";
+import { loadExtraFixtures } from "./extra-fixtures.js";
 import { buildFixtureEmails } from "./fixtures.js";
 import type {
   Draft, Email, EmailSummary, GmailBackend, ListOptions, SendInput,
@@ -17,7 +18,7 @@ export class SandboxGmailBackend implements GmailBackend {
   readonly source = "sandbox" as const;
   private readonly store: JsonStore<State>;
 
-  constructor(dir: string, private readonly clock: () => Date = () => new Date()) {
+  constructor(dir: string, private readonly clock: () => Date = () => new Date(), private readonly extraFixturesDir?: string) {
     this.store = new JsonStore<State>(dir, "sandbox-gmail.json", () => ({
       counter: 0, labels: {}, drafts: [], sent: [],
     }));
@@ -28,7 +29,8 @@ export class SandboxGmailBackend implements GmailBackend {
   }
 
   private allEmails(state: State): Email[] {
-    const inbox = buildFixtureEmails(this.clock()).map((e) => ({
+    const base = [...buildFixtureEmails(this.clock()), ...(this.extraFixturesDir ? loadExtraFixtures(this.extraFixturesDir, this.clock()) : [])];
+    const inbox = base.map((e) => ({
       ...e,
       labels: [...new Set([...e.labels, ...(state.labels[e.id] ?? [])])],
     }));

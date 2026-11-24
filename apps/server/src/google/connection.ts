@@ -2,7 +2,7 @@ import { randomBytes } from "node:crypto";
 import { SANDBOX_USER_EMAIL } from "@munshi/mcp-common";
 import { eq } from "drizzle-orm";
 import { audit } from "../audit.js";
-import type { Config } from "../config.js";
+import { ATTACK_FIXTURES_DIR, type Config } from "../config.js";
 import type { Db } from "../db/index.js";
 import { schema } from "../db/index.js";
 import type { HubOptions } from "../mcp/hub.js";
@@ -89,7 +89,7 @@ export class GoogleConnection {
   authProblem: string | null = null;
 
   constructor(
-    private readonly cfg: Pick<Config, "GOOGLE_CLIENT_ID" | "GOOGLE_CLIENT_SECRET" | "GOOGLE_REDIRECT_URI" | "TOKEN_ENCRYPTION_KEY" | "WEB_ORIGIN" | "SANDBOX_STORE_DIR">,
+    private readonly cfg: Pick<Config, "GOOGLE_CLIENT_ID" | "GOOGLE_CLIENT_SECRET" | "GOOGLE_REDIRECT_URI" | "TOKEN_ENCRYPTION_KEY" | "WEB_ORIGIN" | "SANDBOX_STORE_DIR"> & Partial<Pick<Config, "SANDBOX_ATTACK_EMAILS">>,
     private readonly db: Db,
     private readonly hub: ModeSwitcher,
     private readonly provider?: OAuthProvider,
@@ -180,7 +180,7 @@ export class GoogleConnection {
   // ---- mode ----
 
   hubOptions(mode: Mode): HubOptions {
-    if (mode === "sandbox") return { sandboxDir: this.cfg.SANDBOX_STORE_DIR, backend: "sandbox" };
+    if (mode === "sandbox") return { sandboxDir: this.cfg.SANDBOX_STORE_DIR, backend: "sandbox", extraFixturesDir: this.cfg.SANDBOX_ATTACK_EMAILS ? ATTACK_FIXTURES_DIR : undefined };
     const p = this.payload();
     if (!p || !this.configured) throw new Error("Google is not connected");
     return {

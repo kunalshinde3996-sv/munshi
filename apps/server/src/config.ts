@@ -6,10 +6,17 @@ import { z } from "zod";
 // Load the repo-root .env regardless of which workspace dir npm runs us from.
 loadDotenv({ path: resolve(dirname(fileURLToPath(import.meta.url)), "../../../.env"), quiet: true });
 
+/** Evaluation fixtures (20 injection + 10 benign-but-suspicious emails), also used by `npm run eval:attacks`. */
+export const ATTACK_FIXTURES_DIR = resolve(dirname(fileURLToPath(import.meta.url)), "../../../fixtures/attacks");
+
+export const EVAL_RESULTS_PATH = resolve(dirname(fileURLToPath(import.meta.url)), "../../../docs/eval-results.json");
+
 const Env = z.object({
   PORT: z.coerce.number().default(8787),
   DATABASE_PATH: z.string().default("./data/munshi.db"),
   SANDBOX_STORE_DIR: z.string().default("./data/sandbox"),
+  /** Add the 30 attack/benign evaluation emails (fixtures/attacks) to the SANDBOX mailbox. */
+  SANDBOX_ATTACK_EMAILS: z.string().default("true").transform((v) => !["false", "0", "off", "no"].includes(v.trim().toLowerCase())),
   LLM_PROVIDER: z.enum(["gemini", "anthropic"]).default("gemini"),
   LLM_MODEL: z.string().optional(),
   LLM_FALLBACK_MODEL: z.string().optional(),

@@ -7,8 +7,9 @@ import Approvals from "./pages/Approvals";
 import Inbox, { EmailDrawer } from "./pages/Inbox";
 import Security from "./pages/Security";
 import Policies from "./pages/Policies";
+import Eval from "./pages/Eval";
 
-type Page = "inbox" | "approvals" | "activity" | "security" | "policies";
+type Page = "inbox" | "approvals" | "activity" | "security" | "policies" | "eval";
 
 const TABS: { id: Page; label: string }[] = [
   { id: "inbox", label: "Inbox" },
@@ -16,6 +17,7 @@ const TABS: { id: Page; label: string }[] = [
   { id: "activity", label: "Activity" },
   { id: "security", label: "Security" },
   { id: "policies", label: "Policies" },
+  { id: "eval", label: "Eval" },
 ];
 
 export default function App() {
@@ -86,6 +88,7 @@ export default function App() {
         {page === "activity" && <Activity actions={actions} refresh={() => void refreshActions()} />}
         {page === "security" && <Security onOpenEmail={setOpenEmail} />}
         {page === "policies" && <Policies />}
+        {page === "eval" && <Eval />}
         {openEmail && <EmailDrawer id={openEmail} onClose={() => setOpenEmail(null)} />}
       </main>
     </div>

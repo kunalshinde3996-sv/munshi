@@ -14,6 +14,8 @@ import type { Services } from "./services.js";
 import type { ScanScheduler } from "./scheduler.js";
 import { currentMode, listEmails, listObligations, scanInbox } from "./scan.js";
 import { eq } from "drizzle-orm";
+import { existsSync, readFileSync } from "node:fs";
+import { EVAL_RESULTS_PATH } from "./config.js";
 import { audit } from "./audit.js";
 import { compilePolicy, PolicyCompileError, PolicyDrafts } from "./guard/policy-compile.js";
 import { USER_ID } from "./scan.js";
@@ -87,6 +89,12 @@ export function buildApp({ config, db, mcp, llm, llmError, services, google, sch
       if (e instanceof GoogleAuthToolError) return reply.code(401).send({ code: "google_auth", error: e.message });
       throw e;
     }
+  });
+
+  /** Latest `npm run eval:attacks` result (docs/eval-results.json), exactly as the run wrote it. */
+  app.get("/api/eval", async () => {
+    if (!existsSync(EVAL_RESULTS_PATH)) return { available: false, hint: "Run `npm run eval:attacks` to generate results." };
+    return { available: true, result: JSON.parse(readFileSync(EVAL_RESULTS_PATH, "utf8")) };
   });
 
   app.get("/api/scheduler", async () =>

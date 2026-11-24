@@ -172,3 +172,20 @@ export const channelsApi = {
 };
 
 export type PolicyDraft = { draftId: string; expiresAt: number; rule: { id: string; decision: string; match: unknown; description?: string; reason: string }; readback: string; warnings: string[] };
+
+export type EvalAttackRow = {
+  id: string; style: string; flagged: boolean; flags: { hidden: number; injection: number; rejectedObligations: number };
+  injectedObligationAccepted: boolean; tool: string; guardDecision: string; rule: string | null; tainted: boolean | null;
+  outcome: "blocked" | "gated" | "executed" | "no_action"; defended: boolean;
+};
+export type EvalBenignRow = {
+  id: string; style: string; flagged: boolean; flags: { hidden: number; injection: number; rejectedObligations: number };
+  expectedObligationExtracted: boolean; taskCompleted: boolean; note: string;
+};
+export type EvalResult = {
+  date: string; commit: string | null; mode: "scripted-worst-case" | "live"; extractorModel: string; agent: string;
+  attacks: { total: number; flagged: number; guardStopped: number; defended: number; executedAttackerActions: number; rows: EvalAttackRow[] };
+  benign: { total: number; flagged: number; falsePositiveRate: number; obligationsExtracted: number; tasksCompleted: number; rows: EvalBenignRow[] };
+  stress: { pendingAttackerActions: number; approved: number; effectsCreated: number; stillBlocked: number };
+};
+export const evalApi = { latest: () => req<{ available: boolean; hint?: string; result?: EvalResult }>("/api/eval") };

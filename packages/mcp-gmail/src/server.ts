@@ -59,7 +59,7 @@ export async function backendFromEnv(): Promise<GmailBackend> {
     const { GoogleGmailBackend } = await import("./google.js"); // googleapis is heavy; load only in google mode
     return new GoogleGmailBackend();
   }
-  return new SandboxGmailBackend(sandboxDir());
+  return new SandboxGmailBackend(sandboxDir(), undefined, process.env.SANDBOX_EXTRA_FIXTURES || undefined);
 }
 
 /** Entry point when spawned as a stdio child process. */

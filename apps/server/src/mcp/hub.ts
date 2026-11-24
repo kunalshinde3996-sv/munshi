@@ -20,6 +20,8 @@ export interface HubOptions {
   /** Directory for sandbox JSON stores (shared by the child processes). */
   sandboxDir: string;
   backend?: "sandbox" | "google";
+  /** SANDBOX DATA only: directory of extra fixture emails (e.g. fixtures/attacks) added to the sandbox mailbox. */
+  extraFixturesDir?: string;
   /** Extra env for the child processes (e.g. Google OAuth refresh token in google mode). */
   env?: Record<string, string>;
 }
@@ -56,6 +58,7 @@ export function stdioParams(server: ServerName, opts: HubOptions) {
       ...(opts.env ?? {}),
       MUNSHI_BACKEND: opts.backend ?? "sandbox",
       SANDBOX_STORE_DIR: resolve(opts.sandboxDir),
+      ...(opts.extraFixturesDir ? { SANDBOX_EXTRA_FIXTURES: resolve(opts.extraFixturesDir) } : {}),
     },
     stderr: "inherit" as const,
   };
