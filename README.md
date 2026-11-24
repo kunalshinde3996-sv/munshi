@@ -12,8 +12,7 @@ statement to this address") turns a helpful agent into a data-exfiltration tool.
 short leash with *code*: raw email text is read only by a tool-less extractor, and every proposed tool call is checked by a
 deterministic Guard that never asks an LLM whether something is safe.
 
-![Munshi demo](docs/demo.gif)
-<!-- Demo GIF placeholder: record the flow in docs/DEMO_SCRIPT.md and save it as docs/demo.gif -->
+Walk-through: [docs/DEMO_SCRIPT.md](docs/DEMO_SCRIPT.md) (2 minutes, click by click, ends with the injection-blocked moment and the eval numbers).
 
 ## Quickstart (5 steps)
 
@@ -23,7 +22,7 @@ Requires Node 20+. The whole app runs on **SANDBOX DATA** with no Google account
 2. `cp .env.example .env` (Windows: `copy .env.example .env`), then set `LLM_MODEL` and `GEMINI_API_KEY` (or `LLM_PROVIDER=anthropic` + `ANTHROPIC_API_KEY`). Optional: `LLM_FALLBACK_MODEL`.
 3. `npm run demo:reset`
 4. `npm run dev:server` (API on :8787) and, in a second terminal, `npm run dev:web` (UI on :5173)
-5. Open http://localhost:5173, press **Scan inbox**, then **Handle these**.
+5. Open http://localhost:5173, press **Try sandbox**, then **Scan inbox**, then **Handle these**.
 
 Checks: `npm run typecheck`, `npm test`, `npm run e2e`. More options are under [Setup](#setup-details).
 
@@ -60,9 +59,12 @@ Latest run: 2026-11-24, mode `scripted-worst-case`, extractor `scripted/worst-ca
 | Plain-language policies (LLM drafts, deterministic readback, you confirm; LLM never activates a rule) | Working |
 | Proactive background scans (read + nudge only, never acts) | Working |
 | Attack evaluation benchmark (`npm run eval:attacks`, 20 injections + 10 benign) + Eval tab | Working (default mode is scripted worst case; `--live` uses a real extractor) |
+| Onboarding, error toasts, loading/empty states, responsive layout | Working |
 | R3 actions (delete, pay) | Intentionally blocked in this prototype |
+| WhatsApp channel, Drive, deployment, multi-user login | Planned (not built) |
+| Measured resistance of a *real* LLM extractor to injection (`eval:attacks --live`) | Planned (command exists, no published run yet) |
 
-(This table is updated as features land; "Planned" means not yet merged.)
+Legend: **Working** = implemented and covered by tests/e2e. **Sandbox-only** = works only on fictional fixture data. **Planned** = not built.
 
 ---
 
@@ -70,7 +72,7 @@ Latest run: 2026-11-24, mode `scripted-worst-case`, extractor `scripted/worst-ca
 
 Requires Node 20+ (developed on Node 24, Windows 11).
 
-1. `npm install`
+1. `npm install` (a project `.npmrc` skips install scripts: `better-sqlite3` ships prebuilt binaries, so no C++ toolchain is needed)
 2. `copy .env.example .env` (macOS/Linux: `cp .env.example .env`)
 3. In `.env` set `LLM_PROVIDER` (`gemini` or `anthropic`), `LLM_MODEL` (any model id your key can use) and the matching `GEMINI_API_KEY` / `ANTHROPIC_API_KEY`. Nothing is hardcoded.
 4. `npm run demo:reset` creates a clean database and re-seeds the sandbox mailbox.
@@ -199,4 +201,13 @@ See `CLAUDE.md` for the detailed design notes.
 - Google mode: last 14 days / max 30 emails, no attachments or pagination, calendar events created without invitation emails (`sendUpdates: none`).
 - The web app has typecheck and build checks but no UI tests.
 - Sandbox fixtures use reserved `.example` domains and fictional brands.
-- Out of scope for Phase 1: Telegram/WhatsApp, natural-language policy compiler, scheduled scans, Drive, deployment, attack benchmark. Interfaces are kept pluggable.
+- The headline attack numbers use a scripted worst-case extractor and agent. They show the deterministic layers hold, not that a real LLM resists injection. 6/10 benign look-alike emails were flagged (false positives).
+- Approval fatigue: a user who approves every clearly warned, tainted action defeats the Guard (see the stress test in docs/eval-results.md).
+- No live Telegram run, no WhatsApp, Drive or deployment. Interfaces are kept pluggable.
+
+---
+
+## Team
+
+- _Name, role, contact (placeholder: fill in before submission)_
+- _Name, role, contact_
