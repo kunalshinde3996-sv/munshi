@@ -73,7 +73,7 @@ export default function App() {
             <ModeControl onModeChange={() => void loadHealth()} />
             <ModeBadge mode={health?.mode} />
             <span className="hidden text-xs text-stone-500 sm:inline">
-              {health?.llmModel ? `${health.llmProvider} · ${health.llmModel}` : "LLM not configured"}
+              {health?.replay ? "demo · scripted" : health?.llmModel ? `${health.llmProvider} · ${health.llmModel}` : "LLM not configured"}
             </span>
             <span className={`flex items-center gap-1.5 text-xs ${offline ? "text-red-600" : "text-stone-500"}`}>
               <span className={`h-2 w-2 rounded-full ${offline ? "bg-red-500" : health?.ok ? "bg-emerald-500" : "bg-stone-300"}`} />

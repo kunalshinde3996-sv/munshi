@@ -39,7 +39,13 @@ export function registerAgentRoutes(app: FastifyInstance, db: Db, services: Serv
   app.setErrorHandler((err, _req, reply) => {
     if (err instanceof ActionError) return reply.code(err.status).send({ error: err.message });
     if (err instanceof z.ZodError) return reply.code(400).send({ error: err.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; ") });
-    reply.send(err);
+    // Anything else: always a clean JSON body for the UI ({error}), full detail in the server log, process stays up.
+    const status = (err as { statusCode?: number }).statusCode;
+    const message = err instanceof Error ? err.message : String(err);
+    if (status && status >= 400 && status < 500) return reply.code(status).send({ error: message });
+    app.log.error({ err }, "request failed");
+    console.error(`[request error] ${err instanceof Error ? (err.stack ?? message) : message}`);
+    return reply.code(500).send({ error: `Internal error: ${message}` });
   });
 
   // ---- runs ----

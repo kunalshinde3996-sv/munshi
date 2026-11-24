@@ -170,7 +170,13 @@ export class AgentRuntime {
       this.finish(runId, "completed", `Stopped after the ${this.maxSteps}-step limit.`);
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
-      this.finish(runId, "failed", e instanceof LlmError ? `LLM error: ${msg}` : msg);
+      console.error(`[agent] run ${runId} failed: ${e instanceof Error ? (e.stack ?? msg) : msg}`);
+      try {
+        this.finish(runId, "failed", e instanceof LlmError ? `LLM error: ${msg}` : msg);
+      } catch (e2) {
+        // Even recording the failure failed (e.g. DB error): log it, never let it escape the background task.
+        console.error(`[agent] could not record failure of run ${runId}: ${(e2 as Error).message}`);
+      }
     } finally {
       this.active.delete(runId);
       if (this.resumeRequested.delete(runId) && this.getRun(runId)?.status === "awaiting_approval") this.track(this.loop(runId));

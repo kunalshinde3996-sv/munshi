@@ -1,4 +1,6 @@
+import { dirname, resolve } from "node:path";
 import { buildApp } from "./app.js";
+import { installCrashHandlers } from "./crash-log.js";
 import { loadConfig } from "./config.js";
 import { openDb } from "./db/index.js";
 import { createAgentLlm, createLlm } from "./llm/index.js";
@@ -9,6 +11,9 @@ import { ensureUser } from "./scan.js";
 import { ScanScheduler } from "./scheduler.js";
 
 const config = loadConfig();
+// Log (console + data/server-error.log) instead of dying silently on stray rejections/exceptions.
+const ERROR_LOG = resolve(dirname(resolve(config.DATABASE_PATH)), "server-error.log");
+installCrashHandlers(ERROR_LOG);
 const { db } = openDb(config.DATABASE_PATH);
 ensureUser(db);
 // Saved per-user mode decides which backend the MCP servers start with.

@@ -138,7 +138,7 @@ Every tool declares: `riskTier`, `reversible`, `undoTool?`, `verifyTool?`, `sens
 ## Demo polish (Phase 2, D) - apps/web
 - `Onboarding.tsx`: first-run screen (3 points + "Try sandbox", switches mode to sandbox if needed); flag in localStorage `munshi.onboarded`.
 - `components.tsx`: `Logo` (SVG), `Toaster` (fed by `onErrorToast` in api.ts: every failed write request, incl. server-unreachable), `Spinner`. Inbox has a loading state.
-- `npm run demo:reset` also reports the attack-email seeding (`SANDBOX_ATTACK_EMAILS`, default true). `docs/DEMO_SCRIPT.md` = 2-minute click-by-click.
+- The default sandbox inbox is the 15 demo emails (9 legit, 4 noise, 2 injection). The 30 eval emails (fixtures/attacks) are added only if `SANDBOX_ATTACK_EMAILS=true` (default false); `eval:attacks` and the Eval tab data always use them regardless. `npm run demo:reset` reports which mailbox you get. `docs/DEMO_SCRIPT.md` = 2-minute click-by-click.
 
 ## FP tuning + live checks
 - Sanitizer: every hidden finding is removed and reported, but only `suspicious` ones (instruction verbs, address/URL, injection phrasing, >=5 invisible chars) count as security flags (UI chips, /api/security, eval). Exfiltration phrasing needs an address/URL on the same line for whole-email flagging; extractor output fields (title/counterparty) still reject the address-free wording (`detectInstructionLike`).
@@ -149,6 +149,9 @@ Every tool declares: `riskTier`, `reversible`, `undoTool?`, `verifyTool?`, `sens
 - `LLM_PROVIDER=replay` (llm/replay.ts, fixtures/replay/recording.json): ReplayLlm (extractor, keyed by sender address) + ReplayAgent (first step proposes the recorded plan per obligation, later steps summarise). No key, no model id, no network. `{{date:N}}` placeholders keep dates relative to today. Unknown senders get `{"obligations":[]}`.
 - The recording is AUTHORED to match the sandbox fixtures, not captured from a live model. Its output goes through the same schema check, vetting and Guard as live output.
 - `/api/health` returns `replay` + `replayBanner`; the web app shows a sticky "DEMO MODE — scripted sample outputs, not live AI" banner on every screen incl. onboarding. Switching to Google mode is refused while replaying. Telegram messages carry no replay marker (Telegram is optional and off by default).
+
+## Resilience
+- `crash-log.ts`: `installCrashHandlers` (index.ts) logs unhandledRejection/uncaughtException to console + `<db dir>/server-error.log` and keeps running; >20 in a minute exits(1). Route error handler (routes.ts) returns `{error}` JSON for every failure (4xx keep their status, others 500 "Internal error: ..."), logs the stack. An agent run failure is recorded as run status `failed` (never escapes the background task).
 
 ## Seed policies
 Never auto-send email; block tainted send_email to non-allowlisted recipients;

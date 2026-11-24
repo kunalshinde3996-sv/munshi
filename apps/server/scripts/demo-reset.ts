@@ -28,5 +28,5 @@ sqlite.close();
 console.log("Demo state reset:");
 console.log(`  database       ${dbPath}  (fresh schema, sandbox mode, default policies)`);
 console.log(`  SANDBOX DATA   ${sandbox}  (mailbox/calendar will be re-seeded on first use, dates relative to today)`);
-console.log(config.SANDBOX_ATTACK_EMAILS ? "  attack emails  20 injection + 10 benign look-alike emails will be seeded (SANDBOX DATA)" : "  attack emails  disabled (SANDBOX_ATTACK_EMAILS=false)");
+console.log(config.SANDBOX_ATTACK_EMAILS ? "  mailbox        15 demo emails + 30 eval emails (SANDBOX_ATTACK_EMAILS=true) - SANDBOX DATA" : "  mailbox        15 demo emails (9 legit, 4 noise, 2 injection) - SANDBOX DATA. The 30 eval emails stay in fixtures/attacks for eval:attacks.");
 console.log("Next: npm run dev:server  &&  npm run dev:web");

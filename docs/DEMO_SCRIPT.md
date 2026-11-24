@@ -4,7 +4,7 @@ All data is **SANDBOX DATA** (a fictional mailbox, dates relative to today). No 
 
 ## Before you start (once)
 
-1. Stop the server, then `npm run demo:reset` (clean DB, fresh sandbox mailbox including the 20 attack emails).
+1. Stop the server, then `npm run demo:reset` (clean DB, fresh sandbox mailbox of 15 demo emails: 9 legit, 4 noise, 2 injection; the 30 eval emails are not in the inbox).
 2. `npm run dev:server` and, in another terminal, `npm run dev:web`. Open http://localhost:5173.
 3. Make sure `.env` has a working LLM key. Optional: `SCAN_INTERVAL_MIN=0` so nothing scans in the background mid-demo.
 
@@ -18,7 +18,7 @@ All data is **SANDBOX DATA** (a fictional mailbox, dates relative to today). No 
 | 0:45 | Press **Handle these** | "Now the agent gets only these validated obligations, never raw email text." |
 | 1:00 | **Approvals** tab: open a pending action, expand "Why the Guard asked" | "Anything external needs me. I see a plain-language preview and where each value came from." |
 | 1:10 | Approve a calendar reminder, then in **Activity** show **Verified ✓**, then **Undo** | "Executed, read back from the calendar to verify, and undoable." |
-| 1:25 | Inbox, **Security notes** section: open an attack email (e.g. "Your coupons for today") | "This email hides an instruction in invisible text telling the assistant to send my data to an outsider. The sanitiser stripped it and flagged it." |
+| 1:25 | Inbox, **Security notes** section: open the "This week's best deals" newsletter (or the fake bank "URGENT: Verify your account" email) | "This email hides an instruction in invisible text telling the assistant to send my data to an outsider. The sanitiser stripped it and flagged it." |
 | 1:40 | **Security** tab | "The injected requests ended up here, blocked by a deterministic rule. No LLM decided that. The audit log is append-only." |
 | 1:50 | **Eval** tab | "We ran 20 injection emails plus 10 benign look-alikes against a worst-case compromised agent: 20 of 20 blocked or flagged, 0 attacker actions executed without the user." |
 | 2:00 | Done | "Less magic, more utility: the model proposes, code decides." |

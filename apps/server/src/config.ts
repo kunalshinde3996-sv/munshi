@@ -18,8 +18,8 @@ const Env = z.object({
   PORT: z.coerce.number().default(8787),
   DATABASE_PATH: z.string().default("./data/munshi.db"),
   SANDBOX_STORE_DIR: z.string().default("./data/sandbox"),
-  /** Add the 30 attack/benign evaluation emails (fixtures/attacks) to the SANDBOX mailbox. */
-  SANDBOX_ATTACK_EMAILS: z.string().default("true").transform((v) => !["false", "0", "off", "no"].includes(v.trim().toLowerCase())),
+  /** Opt-in: add the 30 attack/benign evaluation emails (fixtures/attacks) to the SANDBOX mailbox. Default off: the demo inbox is the 15 demo emails. `npm run eval:attacks` always uses them regardless. */
+  SANDBOX_ATTACK_EMAILS: z.string().default("false").transform((v) => !["false", "0", "off", "no"].includes(v.trim().toLowerCase())),
   LLM_PROVIDER: z.enum(["gemini", "anthropic", "replay"]).default("gemini"),
   LLM_MODEL: z.string().optional(),
   LLM_FALLBACK_MODEL: z.string().optional(),

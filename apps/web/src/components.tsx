@@ -126,7 +126,7 @@ export function Spinner({ label = "Loading…" }: { label?: string }) {
   );
 }
 
-/** Shown on every screen (incl. onboarding) while LLM_PROVIDER=replay (DEMO MODE): outputs are scripted samples, not a live model. */
+/** Shown on every screen (incl. onboarding) in demo mode: outputs are scripted samples, not a live model. */
 const BANNER_H = 28;
 export function ReplayBanner({ health }: { health: { replay?: boolean; replayBanner?: string | null } | null }) {
   if (!health?.replay) return null;

@@ -19,7 +19,7 @@ Walk-through: [docs/DEMO_SCRIPT.md](docs/DEMO_SCRIPT.md) (2 minutes, click by cl
 Requires Node 20+. The whole app runs on **SANDBOX DATA** with no Google account.
 
 1. `npm install`
-2. `cp .env.example .env` (Windows: `copy .env.example .env`). The default is `LLM_PROVIDER=replay`: recorded outputs, no API key, with a visible **DEMO MODE — scripted sample outputs, not live AI** banner. For live AI set `LLM_PROVIDER=gemini` + `LLM_MODEL` + `GEMINI_API_KEY` (or `anthropic` + `ANTHROPIC_API_KEY`). Optional: `LLM_FALLBACK_MODEL`.
+2. `cp .env.example .env` (Windows: `copy .env.example .env`). The default is `LLM_PROVIDER=replay` (demo mode): scripted sample outputs, no API key, with a visible **DEMO MODE — scripted sample outputs, not live AI** banner. For live AI set `LLM_PROVIDER=gemini` + `LLM_MODEL` + `GEMINI_API_KEY` (or `anthropic` + `ANTHROPIC_API_KEY`). Optional: `LLM_FALLBACK_MODEL`.
 3. `npm run demo:reset`
 4. `npm run dev:server` (API on :8787) and, in a second terminal, `npm run dev:web` (UI on :5173)
 5. Open http://localhost:5173, press **Try sandbox**, then **Scan inbox**, then **Handle these**.
@@ -56,7 +56,7 @@ Latest run: 2026-11-24, mode `scripted-worst-case`, extractor `scripted/worst-ca
 | LLM resilience: timeout, backoff, 429 retryDelay, pacing (`LLM_RPM`), fallback model, extraction cache | Working |
 | Offline end-to-end scenario (`npm run e2e`) | Working (LLM calls are scripted mocks) |
 | Telegram approvals (inline Approve/Reject, tainted double-confirm) and due-date nudges | Working (needs your bot token; tested against a fake Bot API, not live) |
-| Replay provider (`LLM_PROVIDER=replay`): full sandbox flow with no API key, recordings authored to match the fixtures, banner on every screen | Working (sandbox only; not live AI) |
+| Replay provider (`LLM_PROVIDER=replay`): full sandbox flow with no API key, scripted sample outputs authored to match the fixtures, banner on every screen | Working (sandbox only; not live AI) |
 | Plain-language policies (LLM drafts, deterministic readback, you confirm; LLM never activates a rule) | Working |
 | Proactive background scans (read + nudge only, never acts) | Working |
 | Attack evaluation benchmark (`npm run eval:attacks`, 20 injections + 10 benign) + Eval tab | Working (default mode is scripted worst case; `--live` uses a real extractor) |
