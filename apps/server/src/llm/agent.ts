@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { LlmError, postJson, withFallback, defaultNet, type FetchLike, type NetOptions } from "./types.js";
+import { LlmError, postJson, withFallback, type FallbackOptions, type FetchLike, type NetOptions } from "./types.js";
 
 /**
  * Tool-calling LLM used ONLY by the Agent runtime. Separate from the text-only `LlmAdapter`
@@ -38,7 +38,7 @@ export interface AgentLlm {
 
 /** Primary agent model first; fallback model only after the primary exhausted its retries on 429/503/timeout. */
 export class FallbackAgentLlm implements AgentLlm {
-  constructor(private readonly chain: AgentLlm[], private readonly log: (m: string) => void = defaultNet.log) {}
+  constructor(private readonly chain: AgentLlm[], private readonly opts: Partial<FallbackOptions> = {}) {}
   get provider() {
     return this.chain[0]!.provider;
   }
@@ -46,7 +46,7 @@ export class FallbackAgentLlm implements AgentLlm {
     return this.chain[0]!.model;
   }
   step(req: Parameters<AgentLlm["step"]>[0]) {
-    return withFallback(this.chain, (a) => a.step(req), this.log);
+    return withFallback(this.chain, (a) => a.step(req), this.opts);
   }
 }
 

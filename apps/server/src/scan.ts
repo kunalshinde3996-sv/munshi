@@ -1,9 +1,11 @@
 import { SANDBOX_USER_EMAIL } from "@munshi/mcp-common";
+import { createHash } from "node:crypto";
 import { desc, eq } from "drizzle-orm";
 import { audit } from "./audit.js";
 import { schema, type Db } from "./db/index.js";
 import { Guard } from "./guard/guard.js";
 import { ProvenanceStore } from "./guard/provenance.js";
+import { sanitizeEmailBody } from "./extraction/sanitize.js";
 import { extractObligations, type RawEmail, type SecurityFlags } from "./extraction/extractor.js";
 import type { LlmAdapter } from "./llm/types.js";
 import type { McpHub } from "./mcp/hub.js";
@@ -19,8 +21,17 @@ export function ensureUser(db: Db) {
   new Guard(db, USER_ID).seedPolicies();
 }
 
+/** Extraction cache key: what the extractor would see (sanitized content + headers) plus the configured model. */
+export function extractionCacheKey(email: RawEmail, model: string): string {
+  const sanitized = sanitizeEmailBody(email.body).text;
+  return createHash("sha256")
+    .update(JSON.stringify([model, email.from.address, email.subject, sanitized]))
+    .digest("hex");
+}
+
 export interface ScanSummary {
   listed: number;
+  /** Served from the extraction cache (same sanitized content + model, status "done"). */
   skipped: number;
   extracted: number;
   failed: number;
@@ -33,7 +44,7 @@ export interface ScanOptions {
   db: Db;
   mcp: McpHub;
   llm: LlmAdapter;
-  /** Re-extract emails that already have status "done". */
+  /** Ignore the extraction cache and re-extract every email ("Re-scan all"). */
   force?: boolean;
   now?: Date;
   onProgress?: (msg: string) => void;
@@ -51,12 +62,13 @@ export async function scanInbox({ db, mcp, llm, force = false, now = new Date(),
   };
 
   for (const s of summaries) {
+    const email = (await mcp.callTool("get_email", { id: s.id })).email as RawEmail & { from: RawEmail["from"] };
+    const cacheKey = extractionCacheKey(email, llm.model);
     const existing = db.select().from(schema.emails).where(eq(schema.emails.id, s.id)).get();
-    if (existing?.extractionStatus === "done" && !force) {
+    if (!force && existing?.extractionStatus === "done" && existing.contentHash === cacheKey) {
       out.skipped++;
       continue;
     }
-    const email = (await mcp.callTool("get_email", { id: s.id })).email as RawEmail & { from: RawEmail["from"] };
     onProgress?.(`extracting ${email.id}: ${email.subject}`);
 
     // A fatal LLM error (bad key/model) propagates and aborts the scan; the email row stays as it was.
@@ -68,6 +80,9 @@ export async function scanInbox({ db, mcp, llm, force = false, now = new Date(),
       extractionStatus: result.status,
       extractionError: result.status === "extraction_failed" ? result.error : null,
       securityFlagsJson: JSON.stringify(result.flags),
+      // Only successful extractions are cached; a failed one is retried on the next scan.
+      contentHash: result.status === "done" ? cacheKey : null,
+      extractionModel: result.status === "done" ? llm.model : null,
     } as const;
 
     db.transaction((tx) => {

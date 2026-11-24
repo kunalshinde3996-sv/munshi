@@ -64,7 +64,12 @@ Every tool declares: `riskTier`, `reversible`, `undoTool?`, `verifyTool?`, `sens
   `extraction_failed` (stored + shown). Then `vetObligations`: rejects (visibly, in `security_flags_json`) any obligation whose
   fields hold an address/URL/instruction-like text, whose evidence quote is not verbatim in the sanitized email, or comes from a flagged injection line.
 - Fatal LLM errors (401/403/404/400) abort the scan; other errors fail only that email.
-- LLM calls: 30s AbortController timeout, 3 attempts with exponential backoff on 429/503/timeout/transient network errors (fetch failed, ECONNRESET, ETIMEDOUT), then `LLM_FALLBACK_MODEL` (optional); the model that answered is logged (`[llm] answered by ...`).
+- LLM calls (`llm/types.ts`): 30s AbortController timeout; 3 attempts with exponential backoff on 503/timeout/transient network errors
+  (fetch failed, ECONNRESET, ETIMEDOUT). A 429 is NEVER retried in place: its server `retryDelay` is parsed, honoured (if <= 60s), then the
+  call moves to `LLM_FALLBACK_MODEL` exactly once (no fallback configured -> one retry on the same model). All calls are paced by a shared
+  `LLM_RPM` budget (default 8, 0 = off). The answering model is logged (`[llm] answered by ...`).
+- Extraction cache: `emails.content_hash` = sha256(model, sender, subject, sanitized body) + `extraction_model`. A scan skips emails whose
+  status is `done` and hash matches; failed ones are retried; "Re-scan all" (`force`) ignores the cache.
 - LLM adapters use plain fetch (Gemini generateContent, Anthropic messages); mock LLM exists only in tests.
 - `npm run extract:live` runs the real configured LLM over all sandbox emails and prints a table (in-memory DB).
 

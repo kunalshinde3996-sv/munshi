@@ -167,7 +167,7 @@ export default function Inbox({ health, onActionsChange, goToApprovals }: { heal
             onClick={() => void scan(true)}
             disabled={scanning || !llmReady}
             className="rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm font-medium hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-40"
-            title="Re-extract every email, including ones already done"
+            title="Ignore the extraction cache and re-extract every email"
           >
             Re-scan all
           </button>
@@ -182,7 +182,7 @@ export default function Inbox({ health, onActionsChange, goToApprovals }: { heal
       {error && <p className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">{error}</p>}
       {summary && (
         <p className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-900">
-          Scanned {summary.listed} emails: {summary.extracted} extracted, {summary.skipped} already done, {summary.failed} failed →{" "}
+          Scanned {summary.listed} emails: {summary.extracted} extracted, {summary.skipped} cached, {summary.failed} failed →{" "}
           {summary.obligations} new obligations. {summary.hiddenContentEmails > 0 && `${summary.hiddenContentEmails} had hidden content. `}
           {summary.injectionEmails > 0 && `${summary.injectionEmails} look like prompt-injection attempts.`}
         </p>

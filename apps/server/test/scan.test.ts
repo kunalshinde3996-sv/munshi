@@ -1,11 +1,13 @@
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { buildApp } from "../src/app.js";
 import { loadConfig } from "../src/config.js";
 import { openDb, schema } from "../src/db/index.js";
 import { McpHub } from "../src/mcp/hub.js";
+import { scanInbox } from "../src/scan.js";
 import { MockLlm, obligationJson } from "./helpers.js";
 
 let dir: string;
@@ -76,6 +78,24 @@ describe("scan + obligations API (sandbox, mock LLM)", () => {
     expect(again).toMatchObject({ skipped: 14, extracted: 1, failed: 0 });
     expect(llm.calls.length - callsBefore).toBe(1);
     expect((await app.inject({ method: "GET", url: "/api/obligations" })).json().obligations).toHaveLength(2);
+  }, 60_000);
+
+  it("extraction cache: skips unchanged email+model, re-extracts on model change, changed content, or force", async () => {
+    const { db } = openDb(":memory:");
+    const llm = scriptedLlm({ breakAct: false });
+    const run = (l: MockLlm, force = false) => scanInbox({ db, mcp: hub, llm: l, force });
+    expect(await run(llm)).toMatchObject({ extracted: 15, skipped: 0 });
+    const calls = llm.calls.length;
+    expect(await run(llm)).toMatchObject({ extracted: 0, skipped: 15 });
+    expect(llm.calls.length).toBe(calls); // fully served from cache: zero LLM calls
+
+    const other = scriptedLlm({ breakAct: false });
+    (other as { model: string }).model = "another-model";
+    expect(await run(other)).toMatchObject({ extracted: 15, skipped: 0 }); // model is part of the key
+    expect(await run(other, true)).toMatchObject({ extracted: 15, skipped: 0 }); // "Re-scan all"
+
+    db.update(schema.emails).set({ contentHash: "stale" }).where(eq(schema.emails.id, "sbx-bescom")).run();
+    expect(await run(other)).toMatchObject({ extracted: 1, skipped: 14 }); // content changed -> only that one
   }, 60_000);
 
   it("GET /api/emails/:id shows the extractor input with hidden text removed", async () => {

@@ -32,6 +32,9 @@ export const emails = sqliteTable("emails", {
   extractionError: text("extraction_error"),
   /** JSON: hidden content found, injection phrases, rejected obligations. Never silently dropped. */
   securityFlagsJson: text("security_flags_json"),
+  /** sha256 of the sanitized content the extractor saw. With `extractionModel` this is the extraction cache key. */
+  contentHash: text("content_hash"),
+  extractionModel: text("extraction_model"),
 });
 
 export const obligations = sqliteTable("obligations", {

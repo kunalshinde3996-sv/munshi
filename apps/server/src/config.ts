@@ -13,6 +13,8 @@ const Env = z.object({
   LLM_PROVIDER: z.enum(["gemini", "anthropic"]).default("gemini"),
   LLM_MODEL: z.string().optional(),
   LLM_FALLBACK_MODEL: z.string().optional(),
+  /** Max LLM requests per minute across extractor + agent (0 disables pacing). */
+  LLM_RPM: z.coerce.number().min(0).default(8),
   GEMINI_API_KEY: z.string().optional(),
   ANTHROPIC_API_KEY: z.string().optional(),
   TOKEN_ENCRYPTION_KEY: z.string().optional(),

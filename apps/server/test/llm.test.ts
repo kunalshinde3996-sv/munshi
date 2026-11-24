@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { loadConfig } from "../src/config.js";
-import { AnthropicAdapter, createLlm, FallbackLlm, GeminiAdapter, LlmError, type FetchLike } from "../src/llm/index.js";
+import { AnthropicAdapter, createLlm, FallbackLlm, GeminiAdapter, LlmError, Pacer, parseRetryDelayMs, type FetchLike } from "../src/llm/index.js";
 
 function fakeFetch(status: number, body: unknown) {
   const calls: { url: string; headers: Record<string, string>; body: any }[] = [];
@@ -73,7 +73,7 @@ describe("LLM adapters", () => {
     }
 
     it("retries 503 with exponential backoff, then succeeds", async () => {
-      const f = scripted([503, 429, 200]);
+      const f = scripted([503, 503, 200]);
       const sleeps: number[] = [];
       const a = new GeminiAdapter("m", "k", f.fn, { ...quiet, sleep: async (ms) => void sleeps.push(ms), baseDelayMs: 100 });
       await expect(a.complete({ system: "", user: "" })).resolves.toBe("hi");
@@ -111,6 +111,84 @@ describe("LLM adapters", () => {
       expect(h.count()).toBe(1);
     });
 
+    const quota429 = (delay: string) =>
+      JSON.stringify({ error: { code: 429, status: "RESOURCE_EXHAUSTED", message: "You exceeded your current quota", details: [{ "@type": "type.googleapis.com/google.rpc.RetryInfo", retryDelay: delay }] } });
+    function quotaThen(bodies: Array<string | null>) {
+      let i = 0;
+      const urls: string[] = [];
+      const fn: FetchLike = async (url) => {
+        urls.push(url);
+        const b = bodies[Math.min(i++, bodies.length - 1)];
+        if (b === null) return { ok: true, status: 200, text: async () => JSON.stringify(ok) };
+        return { ok: false, status: 429, text: async () => b as string };
+      };
+      return { fn, urls };
+    }
+
+    it("parses retryDelay from Gemini 429 bodies and Retry-After headers", () => {
+      expect(parseRetryDelayMs(quota429("34s"))).toBe(34_000);
+      expect(parseRetryDelayMs("Please retry in 2.5s.")).toBe(2_500);
+      expect(parseRetryDelayMs("whatever", "7")).toBe(7_000);
+      expect(parseRetryDelayMs("no hint")).toBeUndefined();
+    });
+
+    it("a 429 is never retried in place (no storm): one request, quota error carrying retryDelay", async () => {
+      const f = quotaThen([quota429("12s")]);
+      await expect(new GeminiAdapter("m", "k", f.fn, quiet).complete({ system: "", user: "" })).rejects.toMatchObject({ status: 429, quota: true, retryAfterMs: 12_000 });
+      expect(f.urls).toHaveLength(1);
+    });
+
+    it("on quota 429: waits the server retryDelay, then falls back exactly once", async () => {
+      const f = quotaThen([quota429("12s"), null]);
+      const sleeps: number[] = [];
+      const logs: string[] = [];
+      const chain = ["primary", "backup"].map((m) => new GeminiAdapter(m, "k", f.fn, quiet));
+      const llm = new FallbackLlm(chain, { log: (m) => logs.push(m), sleep: async (ms) => void sleeps.push(ms) });
+      await expect(llm.complete({ system: "", user: "" })).resolves.toBe("hi");
+      expect(sleeps).toEqual([12_000]);
+      expect(f.urls.map((u) => /models\/([^:]+)/.exec(u)![1])).toEqual(["primary", "backup"]);
+      expect(logs.join(" | ")).toContain("waiting 12s then falling back");
+      // fallback also over quota -> gives up (no third attempt, no loop)
+      const g = quotaThen([quota429("5s")]);
+      const chain2 = ["p", "b"].map((m) => new GeminiAdapter(m, "k", g.fn, quiet));
+      await expect(new FallbackLlm(chain2, { log: () => {}, sleep: async () => {} }).complete({ system: "", user: "" })).rejects.toMatchObject({ quota: true });
+      expect(g.urls).toHaveLength(2);
+    });
+
+    it("does not sit through a long retryDelay (e.g. daily quota); single model retries once after the wait", async () => {
+      const f = quotaThen([quota429("3600s"), null]);
+      const sleeps: number[] = [];
+      const chain = ["p", "b"].map((m) => new GeminiAdapter(m, "k", f.fn, quiet));
+      await new FallbackLlm(chain, { log: () => {}, sleep: async (ms) => void sleeps.push(ms) }).complete({ system: "", user: "" });
+      expect(sleeps).toEqual([]);
+      const g = quotaThen([quota429("4s"), null]);
+      const sl: number[] = [];
+      const single = new FallbackLlm([new GeminiAdapter("only", "k", g.fn, quiet)], { log: () => {}, sleep: async (ms) => void sl.push(ms) });
+      await expect(single.complete({ system: "", user: "" })).resolves.toBe("hi");
+      expect(sl).toEqual([4_000]);
+      expect(g.urls).toHaveLength(2);
+    });
+
+    it("Pacer spaces requests 60/rpm seconds apart (and is off at rpm 0)", async () => {
+      let t = 0;
+      const slept: number[] = [];
+      const p = new Pacer(8, () => t, async (ms) => { slept.push(ms); t += ms; });
+      await p.wait();
+      await p.wait();
+      await p.wait();
+      expect(slept).toEqual([7_500, 7_500]);
+      const off = new Pacer(0, () => t, async () => { throw new Error("should not sleep"); });
+      await off.wait();
+      await off.wait();
+    });
+
+    it("the pacer is awaited before every HTTP attempt", async () => {
+      const f = scripted([503, 200]);
+      let paced = 0;
+      await new GeminiAdapter("m", "k", f.fn, { ...quiet, pace: async () => void paced++ }).complete({ system: "", user: "" });
+      expect(paced).toBe(2);
+    });
+
     it("aborts a hung request after the timeout and retries it", async () => {
       const f = scripted(["hang", "hang", "hang"]);
       const a = new GeminiAdapter("m", "k", f.fn, { ...quiet, timeoutMs: 10 });
@@ -122,7 +200,7 @@ describe("LLM adapters", () => {
       const f = scripted([503, 503, 503, 200]);
       const logs: string[] = [];
       const chain = ["primary", "backup"].map((m) => new GeminiAdapter(m, "k", f.fn, quiet));
-      await expect(new FallbackLlm(chain, (m) => logs.push(m)).complete({ system: "", user: "" })).resolves.toBe("hi");
+      await expect(new FallbackLlm(chain, { log: (m) => logs.push(m), sleep: async () => {} }).complete({ system: "", user: "" })).resolves.toBe("hi");
       expect(f.urls.map((u) => /models\/([^:]+)/.exec(u)![1])).toEqual(["primary", "primary", "primary", "backup"]);
       expect(logs.some((l) => l.includes("answered by gemini/backup (fallback)"))).toBe(true);
     });
@@ -130,7 +208,7 @@ describe("LLM adapters", () => {
     it("does not fall back on fatal errors; createLlm wires the fallback chain", async () => {
       const f = scripted([401, 200]);
       const chain = ["p", "b"].map((m) => new GeminiAdapter(m, "k", f.fn, quiet));
-      await expect(new FallbackLlm(chain, () => {}).complete({ system: "", user: "" })).rejects.toMatchObject({ status: 401 });
+      await expect(new FallbackLlm(chain, { log: () => {}, sleep: async () => {} }).complete({ system: "", user: "" })).rejects.toMatchObject({ status: 401 });
       expect(f.urls).toHaveLength(1);
       const made = createLlm(loadConfig({ LLM_MODEL: "a", LLM_FALLBACK_MODEL: "b", GEMINI_API_KEY: "k" }));
       expect("llm" in made && made.llm).toBeInstanceOf(FallbackLlm);
