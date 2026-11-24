@@ -153,6 +153,7 @@ Every tool declares: `riskTier`, `reversible`, `undoTool?`, `verifyTool?`, `sens
 ## Authentication (auth.ts, app.ts)
 - Single user, no registration/reset. `seedDemoUser` (index.ts) creates/refreshes the login from `DEMO_USER_EMAIL`/`DEMO_USER_PASSWORD`; tables `auth_users` (scrypt hash) and `sessions` (sha256(token), 12h expiry). `users` stays the mailbox owner (trusted own-address provenance).
 - `POST /api/auth/login` (rate limit 5/min per IP, 429) sets httpOnly SameSite=Strict cookie `munshi_session`; `/logout` deletes the session; `/me`. An onRequest hook returns 401 `{error:"Not signed in"}` for all `/api/*` and `/auth/google/start` except health/login/logout; `/auth/google/callback` is exempt (own CSRF nonce). Origin/Host check runs first.
+- `POST /api/auth/demo-login`: passwordless login of the seeded demo user, only when `LLM_PROVIDER=replay` and the demo user exists (else 403); shares the login rate limit; audit `login` detail `method: demo_account`. `/api/health.demoLogin` drives the "Use demo account" button; the password never reaches the client.
 - Tests: `withSession(app, db)` (test/helpers.ts) gives an app a real session row + cookie on `app.inject`; e2e does a real login. Web: `App` is the auth gate (`Login.tsx`), any 401 returns to login, onboarding flag is per user email.
 
 ## Resilience

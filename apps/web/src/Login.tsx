@@ -12,12 +12,12 @@ export default function Login({ onLoggedIn }: { onLoggedIn: (u: AuthUser) => voi
   // /api/health is public, so the DEMO MODE banner and server status work before sign-in.
   usePoll(() => api.health().then((h) => { setHealth(h); setOffline(false); }).catch(() => setOffline(true)), 5000);
 
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const submit = async (e: React.FormEvent | null, demo = false) => {
+    e?.preventDefault();
     setBusy(true);
     setErr(null);
     try {
-      onLoggedIn(await authApi.login(email, password));
+      onLoggedIn(demo ? await authApi.demoLogin() : await authApi.login(email, password));
     } catch (e2) {
       setErr((e2 as Error).message);
       setPassword("");
@@ -60,6 +60,14 @@ export default function Login({ onLoggedIn }: { onLoggedIn: (u: AuthUser) => voi
           >
             {busy ? "Signing in…" : "Sign in"}
           </button>
+          {health?.demoLogin && (
+            <button
+              type="button" disabled={busy || offline} onClick={() => void submit(null, true)}
+              className="w-full rounded-lg border border-violet-300 bg-violet-50 px-4 py-2.5 text-sm font-semibold text-violet-900 hover:bg-violet-100 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              Use demo account
+            </button>
+          )}
           <p className="text-xs text-stone-500">The demo login is set in <code>.env</code> (<code>DEMO_USER_EMAIL</code> / <code>DEMO_USER_PASSWORD</code>).</p>
         </form>
       </div>

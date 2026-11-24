@@ -82,11 +82,25 @@ export class AuthService {
       audit(this.db, { event: "login_failed", actor: "system", detail: { email: normEmail(email).slice(0, 120) } });
       return null;
     }
+    return this.openSession(row, false);
+  }
+
+  /**
+   * Passwordless login of the seeded demo user. The CALLER must have verified that demo mode is on; this never takes
+   * a client-supplied email. Returns null when the demo user has not been seeded.
+   */
+  loginDemo(demoEmail: string | undefined): { token: string; session: SessionInfo } | null {
+    if (!demoEmail) return null;
+    const row = this.db.select().from(schema.authUsers).where(eq(schema.authUsers.email, normEmail(demoEmail))).get();
+    return row ? this.openSession(row, true) : null;
+  }
+
+  private openSession(row: typeof schema.authUsers.$inferSelect, demo: boolean): { token: string; session: SessionInfo } {
     this.db.delete(schema.sessions).where(lt(schema.sessions.expiresAt, this.now())).run();
     const token = randomBytes(32).toString("base64url");
     const expiresAt = this.now() + SESSION_TTL_MS;
     this.db.insert(schema.sessions).values({ id: sha256(token), authUserId: row.id, createdAt: this.now(), expiresAt }).run();
-    audit(this.db, { event: "login", actor: "user", detail: { email: row.email } });
+    audit(this.db, { event: "login", actor: "user", detail: { email: row.email, method: demo ? "demo_account" : "password" } });
     return { token, session: { email: row.email, expiresAt } };
   }
 

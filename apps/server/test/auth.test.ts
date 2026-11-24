@@ -134,3 +134,48 @@ describe("password hashing and limiter", () => {
     expect(rl.hit("k")).toBe(0);
   });
 });
+
+describe("demo account button (POST /api/auth/demo-login)", () => {
+  async function demoApp(provider: "replay" | "gemini", seeded = true) {
+    const { db } = openDb(":memory:");
+    ensureUser(db);
+    if (seeded) await seedDemoUser(db, EMAIL, PASSWORD);
+    const config = loadConfig({ LLM_PROVIDER: provider, DEMO_USER_EMAIL: EMAIL, DEMO_USER_PASSWORD: PASSWORD });
+    return { db, app: buildApp({ config, db }) };
+  }
+
+  it("works in demo mode: health advertises it, the session works, the password is never exposed, the audit log says how", async () => {
+    const { app, db } = await demoApp("replay");
+    const health = (await app.inject({ method: "GET", url: "/api/health" })).json();
+    expect(health.demoLogin).toBe(true);
+    expect(JSON.stringify(health)).not.toContain(PASSWORD);
+    const r = await app.inject({ method: "POST", url: "/api/auth/demo-login" });
+    expect(r.statusCode).toBe(200);
+    expect(JSON.stringify(r.json())).not.toContain(PASSWORD);
+    expect(String(r.headers["set-cookie"])).toMatch(/HttpOnly; SameSite=Strict/);
+    const cookie = cookieOf(r);
+    expect((await app.inject({ method: "GET", url: "/api/auth/me", headers: { cookie } })).json().user.email).toBe(EMAIL);
+    const { schema } = await import("../src/db/index.js");
+    const entries = db.select().from(schema.auditLog).all().filter((a) => a.event === "login");
+    expect(entries.some((a) => JSON.parse(a.detail).method === "demo_account")).toBe(true);
+  });
+
+  it("is 403 when not in demo mode (and health says so), with no cookie", async () => {
+    const { app } = await demoApp("gemini");
+    expect((await app.inject({ method: "GET", url: "/api/health" })).json().demoLogin).toBe(false);
+    const r = await app.inject({ method: "POST", url: "/api/auth/demo-login" });
+    expect(r.statusCode).toBe(403);
+    expect(r.headers["set-cookie"]).toBeUndefined();
+  });
+
+  it("is 403 when demo mode is on but the demo user was never seeded", async () => {
+    const { app } = await demoApp("replay", false);
+    expect((await app.inject({ method: "POST", url: "/api/auth/demo-login" })).statusCode).toBe(403);
+  });
+
+  it("shares the login rate limit", async () => {
+    const { app } = await demoApp("replay");
+    for (let i = 0; i < 5; i++) expect((await app.inject({ method: "POST", url: "/api/auth/demo-login" })).statusCode).toBe(200);
+    expect((await app.inject({ method: "POST", url: "/api/auth/demo-login" })).statusCode).toBe(429);
+  });
+});

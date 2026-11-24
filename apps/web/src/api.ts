@@ -3,6 +3,7 @@ export type Health = {
   mode: "sandbox" | "google";
   llmProvider: string;
   replay?: boolean;
+  demoLogin?: boolean;
   replayBanner?: string | null;
   llmConfigured: boolean;
   llmModel: string | null;
@@ -228,5 +229,6 @@ export const authApi = {
   me: () => req<{ user: AuthUser }>("/api/auth/me").then((r) => r.user),
   login: (email: string, password: string) =>
     req<{ user: AuthUser }>("/api/auth/login", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email, password }) }).then((r) => r.user),
+  demoLogin: () => req<{ user: AuthUser }>("/api/auth/demo-login", { method: "POST", headers: { "content-type": "application/json" }, body: "{}" }).then((r) => r.user),
   logout: () => req<{ ok: boolean }>("/api/auth/logout", { method: "POST", headers: { "content-type": "application/json" }, body: "{}" }),
 };

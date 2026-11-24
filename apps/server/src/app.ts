@@ -59,7 +59,7 @@ export function buildApp({ config, db, mcp, llm, llmError, services, google, sch
   // ---- authentication (single user, seeded from env; no registration, no password reset) ----
   const auth = new AuthService(db);
   const loginLimiter = new RateLimiter();
-  const PUBLIC = new Set(["/api/health", "/api/auth/login", "/api/auth/logout", "/auth/google/callback"]);
+  const PUBLIC = new Set(["/api/health", "/api/auth/login", "/api/auth/demo-login", "/api/auth/logout", "/auth/google/callback"]);
   app.addHook("onRequest", async (req, reply) => {
     const path = req.url.split("?")[0]!;
     if (req.method === "OPTIONS" || PUBLIC.has(path)) return;
@@ -76,6 +76,16 @@ export function buildApp({ config, db, mcp, llm, llmError, services, google, sch
     if (!r) return reply.code(401).send({ error: "Wrong email or password" });
     return reply.header("set-cookie", sessionCookie(r.token)).send({ user: { email: r.session.email }, expiresAt: r.session.expiresAt });
   });
+  // One-click demo login: only in demo mode (LLM_PROVIDER=replay) and only for the seeded demo user. The password never leaves the server.
+  const demoLoginOn = config.LLM_PROVIDER === "replay" && Boolean(config.DEMO_USER_EMAIL && config.DEMO_USER_PASSWORD);
+  app.post("/api/auth/demo-login", async (req, reply) => {
+    const wait = loginLimiter.hit(req.ip);
+    if (wait) return reply.code(429).header("retry-after", String(wait)).send({ error: `Too many login attempts. Try again in ${wait}s.` });
+    if (!demoLoginOn) return reply.code(403).send({ error: "Demo account is only available in demo mode" });
+    const r = auth.loginDemo(config.DEMO_USER_EMAIL);
+    if (!r) return reply.code(403).send({ error: "Demo account is not set up on this server" });
+    return reply.header("set-cookie", sessionCookie(r.token)).send({ user: { email: r.session.email }, expiresAt: r.session.expiresAt });
+  });
   app.post("/api/auth/logout", async (req, reply) => {
     auth.logout(readCookie(req.headers.cookie, SESSION_COOKIE));
     return reply.header("set-cookie", clearedCookie()).send({ ok: true });
@@ -90,6 +100,7 @@ export function buildApp({ config, db, mcp, llm, llmError, services, google, sch
     service: "munshi-server",
     llmProvider: config.LLM_PROVIDER,
     replay: config.LLM_PROVIDER === "replay",
+    demoLogin: demoLoginOn,
     replayBanner: config.LLM_PROVIDER === "replay" ? REPLAY_BANNER : null,
     llmConfigured: Boolean(llm),
     llmModel: llm?.model ?? null,
