@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { LlmError, postJson, type FetchLike, type LlmAdapter, type LlmRequest } from "./types.js";
+import { LlmError, postJson, type FetchLike, type LlmAdapter, type NetOptions, type LlmRequest } from "./types.js";
 
 const Response = z.object({
   content: z.array(z.object({ type: z.string(), text: z.string().optional() })),
@@ -11,6 +11,7 @@ export class AnthropicAdapter implements LlmAdapter {
     readonly model: string,
     private readonly apiKey: string,
     private readonly fetchFn: FetchLike = fetch as unknown as FetchLike,
+    private readonly net: Partial<NetOptions> = {},
   ) {}
 
   async complete(req: LlmRequest): Promise<string> {
@@ -25,6 +26,8 @@ export class AnthropicAdapter implements LlmAdapter {
         system: req.system,
         messages: [{ role: "user", content: req.user }],
       },
+      this.net,
+      `anthropic/${this.model}`,
     );
     const parsed = Response.safeParse(raw);
     const text = parsed.success

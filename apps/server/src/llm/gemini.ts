@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { LlmError, postJson, type FetchLike, type LlmAdapter, type LlmRequest } from "./types.js";
+import { LlmError, postJson, type FetchLike, type LlmAdapter, type NetOptions, type LlmRequest } from "./types.js";
 
 const Response = z.object({
   candidates: z
@@ -13,6 +13,7 @@ export class GeminiAdapter implements LlmAdapter {
     readonly model: string,
     private readonly apiKey: string,
     private readonly fetchFn: FetchLike = fetch as unknown as FetchLike,
+    private readonly net: Partial<NetOptions> = {},
   ) {}
 
   async complete(req: LlmRequest): Promise<string> {
@@ -25,7 +26,7 @@ export class GeminiAdapter implements LlmAdapter {
         maxOutputTokens: req.maxTokens ?? 2048,
         ...(req.json ? { responseMimeType: "application/json" } : {}),
       },
-    });
+    }, this.net, `gemini/${this.model}`);
     const parsed = Response.safeParse(raw);
     const text = parsed.success
       ? parsed.data.candidates?.[0]?.content?.parts?.map((p) => p.text ?? "").join("")

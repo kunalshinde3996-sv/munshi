@@ -12,6 +12,7 @@ const Env = z.object({
   SANDBOX_STORE_DIR: z.string().default("./data/sandbox"),
   LLM_PROVIDER: z.enum(["gemini", "anthropic"]).default("gemini"),
   LLM_MODEL: z.string().optional(),
+  LLM_FALLBACK_MODEL: z.string().optional(),
   GEMINI_API_KEY: z.string().optional(),
   ANTHROPIC_API_KEY: z.string().optional(),
   TOKEN_ENCRYPTION_KEY: z.string().optional(),

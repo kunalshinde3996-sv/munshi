@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { LlmError, postJson, type FetchLike } from "./types.js";
+import { LlmError, postJson, withFallback, defaultNet, type FetchLike, type NetOptions } from "./types.js";
 
 /**
  * Tool-calling LLM used ONLY by the Agent runtime. Separate from the text-only `LlmAdapter`
@@ -36,6 +36,20 @@ export interface AgentLlm {
   step(req: { system: string; messages: AgentMessage[]; tools: ToolSpec[] }): Promise<AgentStep>;
 }
 
+/** Primary agent model first; fallback model only after the primary exhausted its retries on 429/503/timeout. */
+export class FallbackAgentLlm implements AgentLlm {
+  constructor(private readonly chain: AgentLlm[], private readonly log: (m: string) => void = defaultNet.log) {}
+  get provider() {
+    return this.chain[0]!.provider;
+  }
+  get model() {
+    return this.chain[0]!.model;
+  }
+  step(req: Parameters<AgentLlm["step"]>[0]) {
+    return withFallback(this.chain, (a) => a.step(req), this.log);
+  }
+}
+
 /** Gemini accepts only an OpenAPI-style subset of JSON Schema. */
 const GEMINI_KEYS = new Set(["type", "description", "properties", "required", "items", "enum", "minimum", "maximum", "minItems", "maxItems", "nullable"]);
 export function toGeminiSchema(schema: unknown): unknown {
@@ -65,7 +79,7 @@ const GeminiResp = z.object({
 
 export class GeminiAgentLlm implements AgentLlm {
   readonly provider = "gemini";
-  constructor(readonly model: string, private readonly apiKey: string, private readonly fetchFn: FetchLike = fetch as unknown as FetchLike) {}
+  constructor(readonly model: string, private readonly apiKey: string, private readonly fetchFn: FetchLike = fetch as unknown as FetchLike, private readonly net: Partial<NetOptions> = {}) {}
 
   async step({ system, messages, tools }: Parameters<AgentLlm["step"]>[0]): Promise<AgentStep> {
     const contents = messages.map((m) => {
@@ -95,6 +109,8 @@ export class GeminiAgentLlm implements AgentLlm {
         toolConfig: tools.length ? { functionCallingConfig: { mode: "AUTO" } } : undefined,
         generationConfig: { temperature: 0, maxOutputTokens: 4096 },
       },
+      this.net,
+      `gemini/${this.model}`,
     );
     const parsed = GeminiResp.safeParse(raw);
     const parts = parsed.success ? parsed.data.candidates?.[0]?.content?.parts : undefined;
@@ -115,7 +131,7 @@ const AnthropicResp = z.object({ content: z.array(z.record(z.string(), z.unknown
 
 export class AnthropicAgentLlm implements AgentLlm {
   readonly provider = "anthropic";
-  constructor(readonly model: string, private readonly apiKey: string, private readonly fetchFn: FetchLike = fetch as unknown as FetchLike) {}
+  constructor(readonly model: string, private readonly apiKey: string, private readonly fetchFn: FetchLike = fetch as unknown as FetchLike, private readonly net: Partial<NetOptions> = {}) {}
 
   async step({ system, messages, tools }: Parameters<AgentLlm["step"]>[0]): Promise<AgentStep> {
     const wire = messages.map((m) => {
@@ -143,6 +159,8 @@ export class AnthropicAgentLlm implements AgentLlm {
         messages: wire,
         tools: tools.length ? tools.map((t) => ({ name: t.name, description: t.description, input_schema: t.parameters })) : undefined,
       },
+      this.net,
+      `anthropic/${this.model}`,
     );
     const parsed = AnthropicResp.safeParse(raw);
     if (!parsed.success) throw new LlmError("Anthropic returned an unexpected response");

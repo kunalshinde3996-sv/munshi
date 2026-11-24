@@ -64,6 +64,7 @@ Every tool declares: `riskTier`, `reversible`, `undoTool?`, `verifyTool?`, `sens
   `extraction_failed` (stored + shown). Then `vetObligations`: rejects (visibly, in `security_flags_json`) any obligation whose
   fields hold an address/URL/instruction-like text, whose evidence quote is not verbatim in the sanitized email, or comes from a flagged injection line.
 - Fatal LLM errors (401/403/404/400) abort the scan; other errors fail only that email.
+- LLM calls: 30s AbortController timeout, 3 attempts with exponential backoff on 429/503/timeout, then `LLM_FALLBACK_MODEL` (optional); the model that answered is logged (`[llm] answered by …`).
 - LLM adapters use plain fetch (Gemini generateContent, Anthropic messages); mock LLM exists only in tests.
 - `npm run extract:live` runs the real configured LLM over all sandbox emails and prints a table (in-memory DB).
 
