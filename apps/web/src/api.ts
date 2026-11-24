@@ -137,6 +137,9 @@ export const api2 = {
   addPolicy: (rule: unknown) => post<unknown>("/api/policies", { rule }),
   togglePolicy: (id: string, enabled: boolean) => req<unknown>(`/api/policies/${id}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ enabled }) }),
   deletePolicy: (id: string) => req<unknown>(`/api/policies/${id}`, { method: "DELETE" }),
+  compilePolicy: (text: string) => post<PolicyDraft>("/api/policies/compile", { text }),
+  confirmPolicyDraft: (draftId: string) => post<unknown>(`/api/policies/compile/${draftId}/confirm`),
+  discardPolicyDraft: (draftId: string) => req<unknown>(`/api/policies/compile/${draftId}`, { method: "DELETE" }),
   contacts: () => req<{ contacts: Contact[] }>("/api/contacts").then((r) => r.contacts),
   addContact: (name: string, email: string) => post<unknown>("/api/contacts", { name, email }),
   deleteContact: (id: string) => req<unknown>(`/api/contacts/${id}`, { method: "DELETE" }),
@@ -165,3 +168,5 @@ export const channelsApi = {
   telegram: () => req<TelegramStatus>("/api/telegram"),
   nudges: () => req<{ nudges: Nudge[] }>("/api/nudges").then((r) => r.nudges),
 };
+
+export type PolicyDraft = { draftId: string; expiresAt: number; rule: { id: string; decision: string; match: unknown; description?: string; reason: string }; readback: string; warnings: string[] };

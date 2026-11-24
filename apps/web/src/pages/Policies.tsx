@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import { api2, type Contact, type PolicyRow } from "../api";
+import { api2, type Contact, type PolicyDraft, type PolicyRow } from "../api";
 import { Banner, Chip, usePoll } from "../components";
 import TelegramCard from "./Channels";
 
@@ -20,6 +20,9 @@ export default function Policies() {
   const [err, setErr] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [sentence, setSentence] = useState("");
+  const [compiling, setCompiling] = useState(false);
+  const [pending, setPending] = useState<PolicyDraft | null>(null);
 
   const load = useCallback(async () => {
     const [p, c] = await Promise.all([api2.policies(), api2.contacts()]);
@@ -36,6 +39,19 @@ export default function Policies() {
       await load();
     } catch (e) {
       setErr((e as Error).message);
+    }
+  };
+
+  const compile = async () => {
+    setErr(null);
+    setCompiling(true);
+    try {
+      setPending(await api2.compilePolicy(sentence));
+    } catch (e) {
+      setPending(null);
+      setErr((e as Error).message);
+    } finally {
+      setCompiling(false);
     }
   };
 
@@ -87,6 +103,30 @@ export default function Policies() {
             </li>
           ))}
         </ul>
+      </section>
+
+      <section className="space-y-2" aria-label="Plain-language rule">
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-stone-500">Describe a rule in plain language</h2>
+        <p className="text-sm text-stone-600">
+          For example: <i>never email my professor without asking</i>. The AI drafts a rule; you review it and confirm. Nothing is saved or active until you confirm.
+        </p>
+        <form className="flex flex-wrap gap-2" onSubmit={(e) => { e.preventDefault(); void compile(); }}>
+          <input value={sentence} onChange={(e) => { setSentence(e.target.value); setPending(null); }} minLength={5} maxLength={500} required
+            placeholder="Type your rule…" className="min-w-0 flex-1 rounded-lg border border-stone-300 px-3 py-2 text-sm" />
+          <button disabled={compiling} className="rounded-lg bg-ink px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">{compiling ? "Compiling…" : "Compile"}</button>
+        </form>
+        {pending && (
+          <div className="space-y-3 rounded-xl border-2 border-amber-300 bg-amber-50 p-4" role="group" aria-label="Draft rule">
+            <p className="text-xs font-semibold uppercase tracking-wide text-amber-900">Draft: not active yet</p>
+            <p className="text-sm text-stone-900"><b>In plain English:</b> {pending.readback}</p>
+            {pending.warnings.map((w) => <p key={w} className="rounded bg-white/70 p-2 text-xs text-amber-950">{w}</p>)}
+            <details className="text-xs"><summary className="cursor-pointer text-stone-600">Compiled rule (JSON)</summary><pre className="mt-1 overflow-x-auto rounded bg-white p-2">{JSON.stringify(pending.rule, null, 1)}</pre></details>
+            <div className="flex gap-2">
+              <button onClick={() => void run(() => api2.confirmPolicyDraft(pending.draftId), () => { setPending(null); setSentence(""); })} className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-800">Confirm and save</button>
+              <button onClick={() => void run(() => api2.discardPolicyDraft(pending.draftId), () => setPending(null))} className="rounded-lg border border-stone-300 bg-white px-4 py-2 text-sm hover:bg-stone-50">Discard</button>
+            </div>
+          </div>
+        )}
       </section>
 
       <section className="space-y-2">

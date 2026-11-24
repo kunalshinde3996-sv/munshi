@@ -124,6 +124,12 @@ Every tool declares: `riskTier`, `reversible`, `undoTool?`, `verifyTool?`, `sens
 - Nudges: `syncNudges` creates a `notifications(kind=nudge)` row for each obligation due within 48h with no pending/approved/held/executed/verified action; delivered once to Telegram, shown in the Inbox banner (`GET /api/nudges`).
 - No token -> `GET /api/telegram` = `{configured:false}` + setup steps; UI shows "Not configured"; nothing else changes.
 
+## Plain-language policies (Phase 2, C2) - guard/policy-compile.ts
+- `POST /api/policies/compile {text}` -> LLM (tool-less text adapter, sees only the user's typed sentence + tool/arg list) -> strict `PolicyRule` zod + real-tool/real-arg checks
+  (retry once) -> **draft** with a deterministic readback (`describeRule`, code not LLM) + warnings. Nothing is saved. Rule id is server-assigned (`user-xxxxxx`).
+- Only `POST /api/policies/compile/:draftId/confirm` (single-use, 15 min TTL, saves the exact stored rule) activates it. Audit events `policy_proposed` / `policy_confirmed`.
+- Invalid compile -> 422 with a clear message; the built-in Guard invariants are unaffected by any rule.
+
 ## Seed policies
 Never auto-send email; block tainted send_email to non-allowlisted recipients;
 auto-allow calendar reminders for obligations with confidence >= 0.8.

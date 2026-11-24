@@ -13,6 +13,9 @@ import type { GoogleConnection } from "./google/connection.js";
 import type { Services } from "./services.js";
 import { currentMode, listEmails, listObligations, scanInbox } from "./scan.js";
 import { eq } from "drizzle-orm";
+import { audit } from "./audit.js";
+import { compilePolicy, PolicyCompileError, PolicyDrafts } from "./guard/policy-compile.js";
+import { USER_ID } from "./scan.js";
 
 export interface AppDeps {
   config: Config;
@@ -107,6 +110,36 @@ export function buildApp({ config, db, mcp, llm, llmError, services, google }: A
       error: row?.extractionError ?? null,
       flags: row?.securityFlagsJson ? JSON.parse(row.securityFlagsJson) : null,
     };
+  });
+
+  // ---- plain-language policies: compile -> user reviews -> explicit confirm. The LLM never activates a rule. ----
+  const drafts = new PolicyDrafts();
+  app.post("/api/policies/compile", async (req, reply) => {
+    if (!llm) return reply.code(503).send({ error: `LLM not configured: ${llmError ?? "unknown"}` });
+    const { text } = z.object({ text: z.string().trim().min(5).max(500) }).parse(req.body);
+    try {
+      const compiled = await compilePolicy(llm, text);
+      const d = drafts.add(compiled, text);
+      audit(db, { event: "policy_proposed", actor: "system", detail: { draftId: d.id, text, rule: compiled.rule } });
+      return { draftId: d.id, expiresAt: d.expiresAt, rule: compiled.rule, readback: compiled.readback, warnings: compiled.warnings };
+    } catch (e) {
+      if (e instanceof PolicyCompileError) return reply.code(422).send({ error: e.message });
+      if (e instanceof LlmError) return reply.code(502).send({ error: `LLM error: ${e.message}` });
+      throw e;
+    }
+  });
+  app.post("/api/policies/compile/:draftId/confirm", async (req, reply) => {
+    const { draftId } = z.object({ draftId: z.string() }).parse(req.params);
+    const d = drafts.take(draftId);
+    if (!d) return reply.code(404).send({ error: "That draft expired or was already used. Compile it again." });
+    const rule = d.policy.rule;
+    db.insert(schema.policies).values({ id: rule.id, userId: USER_ID, ruleJson: JSON.stringify(rule) }).run();
+    audit(db, { event: "policy_confirmed", actor: "user", detail: { draftId, text: d.text, rule } });
+    return { policy: { id: rule.id, enabled: true, seed: false, rule, valid: true } };
+  });
+  app.delete("/api/policies/compile/:draftId", async (req) => {
+    const { draftId } = z.object({ draftId: z.string() }).parse(req.params);
+    return { ok: drafts.discard(draftId) };
   });
 
   registerAgentRoutes(app, db, services);

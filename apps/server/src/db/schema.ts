@@ -119,7 +119,7 @@ export const auditLog = sqliteTable("audit_log", {
   actionId: text("action_id"),
   event: text("event", {
     enum: ["held", "hidden_content_detected", "injection_suspected", "proposed", "decision", "approved", "rejected", "executed", "verified",
-      "verification_failed", "undone", "skipped", "failed"],
+      "verification_failed", "undone", "skipped", "failed", "policy_proposed", "policy_confirmed"],
   }).notNull(),
   actor: text("actor").notNull(), // "agent" | "guard" | "user" | "system"
   detail: text("detail").notNull(), // JSON
