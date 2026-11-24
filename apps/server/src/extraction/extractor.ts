@@ -3,7 +3,7 @@ import { LlmError, type LlmAdapter } from "../llm/types.js";
 import {
   ExtractedObligation, ExtractionOutput, obligationId, OBLIGATION_TYPES, type Obligation,
 } from "./obligation.js";
-import { detectInjection, sanitizeEmailBody, type HiddenFinding, type InjectionFinding } from "./sanitize.js";
+import { detectInjection, detectInstructionLike, sanitizeEmailBody, type HiddenFinding, type InjectionFinding } from "./sanitize.js";
 
 export interface RawEmail {
   id: string;
@@ -117,7 +117,7 @@ export function vetObligations(
     const q = norm(o.evidenceQuote);
     let reason: string | null = null;
     if (fields.some((f) => ADDRESS_OR_URL.test(f))) reason = "field contains an email address or URL";
-    else if (fields.some((f) => detectInjection(f).length > 0)) reason = "field contains instruction-like text";
+    else if (fields.some((f) => detectInjection(f).length > 0) || [o.title, o.counterparty ?? ""].some(detectInstructionLike)) reason = "field contains instruction-like text";
     else if (inj.some((l) => l.includes(q) || q.includes(l))) reason = "evidence quote comes from suspected injected text";
     else if (!haystack.includes(q)) reason = "evidence quote is not present in the email";
     if (reason) {

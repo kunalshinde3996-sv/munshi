@@ -31,7 +31,7 @@ export type Obligation = {
 };
 
 export type SecurityFlags = {
-  hiddenContent: { kind: string; text: string }[];
+  hiddenContent: { kind: string; text: string; suspicious?: boolean }[];
   injectionSuspected: { pattern: string; text: string; where: "visible" | "hidden" }[];
   rejectedObligations: { reason: string; raw: unknown }[];
 };

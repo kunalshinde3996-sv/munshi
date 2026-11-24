@@ -9,7 +9,17 @@
 export interface HiddenFinding {
   kind: string;
   text: string;
+  /**
+   * Hidden text is always removed and reported. It counts as a security flag only when it looks like an instruction or carries a
+   * target: an email address, URL, imperative verb or injection phrasing. A bare marketing preheader or a stray invisible character is
+   * recorded (suspicious=false) but is not raised as a security finding.
+   */
+  suspicious: boolean;
 }
+
+const INSTRUCTION_VERBS = /\b(send|forward|email|mail|share|create|draft|add|invite|delete|remove|label|book|pay|transfer|reply|ignore|disregard|override|reveal|leak|exfiltrate|assistant|agent|ai|llm|instructions?|system)\b/i;
+const ADDRESS_OR_URL = /@|https?:\/\/|www\./i;
+const isSuspiciousHidden = (text: string) => ADDRESS_OR_URL.test(text) || INSTRUCTION_VERBS.test(text) || detectInjection(text).length > 0;
 
 export interface InjectionFinding {
   pattern: string;
@@ -54,14 +64,19 @@ const collapse = (s: string) => s.replace(/[ \t]+/g, " ").replace(/\n{3,}/g, "\n
 export function sanitizeEmailBody(raw: string): SanitizeResult {
   const hidden: HiddenFinding[] = [];
 
-  if (ZERO_WIDTH.test(raw)) hidden.push({ kind: "zero_width_characters", text: "(invisible characters removed)" });
+  const zw = raw.match(ZERO_WIDTH)?.length ?? 0;
+  // A few stray invisible characters are common (copy-paste, rich-text editors); a run of them is obfuscation.
+  if (zw > 0) hidden.push({ kind: "zero_width_characters", text: "(invisible characters removed)", suspicious: zw >= 5 });
   const input = raw.replace(ZERO_WIDTH, "");
 
   const visible: string[] = [];
   const stack: { tag: string; reason: string | null }[] = [];
   let hiddenBuf: { kind: string; text: string } | null = null;
   const flushHidden = () => {
-    if (hiddenBuf && hiddenBuf.text.trim()) hidden.push({ kind: hiddenBuf.kind, text: clip(collapse(decodeEntities(hiddenBuf.text))) });
+    if (hiddenBuf && hiddenBuf.text.trim()) {
+      const t = clip(collapse(decodeEntities(hiddenBuf.text)));
+      hidden.push({ kind: hiddenBuf.kind, text: t, suspicious: isSuspiciousHidden(t) });
+    }
     hiddenBuf = null;
   };
   const hiddenDepth = () => stack.find((s) => s.reason)?.reason ?? null;
@@ -85,7 +100,10 @@ export function sanitizeEmailBody(raw: string): SanitizeResult {
     const tok = m[0];
     if (tok.startsWith("<!--")) {
       const inner = tok.slice(4, -3);
-      if (inner.trim()) hidden.push({ kind: "html_comment", text: clip(collapse(inner)) });
+      if (inner.trim()) {
+        const t = clip(collapse(inner));
+        hidden.push({ kind: "html_comment", text: t, suspicious: isSuspiciousHidden(t) });
+      }
       continue;
     }
     const closing = tok.startsWith("</");
@@ -115,11 +133,12 @@ export function sanitizeEmailBody(raw: string): SanitizeResult {
 const INJECTION_PATTERNS: [string, RegExp][] = [
   ["addresses_ai_assistant", /\b(ai|llm)\s+(assistants?|agents?|models?)\b/i],
   ["ignore_instructions", /\bignore\b[^.\n]{0,30}\b(previous|prior|above|earlier)\b[^.\n]{0,20}\b(instructions?|prompts?)\b/i],
-  ["fake_system_instruction", /\b(system|developer|admin)\s+(instructions?|prompts?|messages?|override)\b/i],
-  ["concealment", /\bdo not (mention|tell|inform|reveal|notify)\b[^.\n]{0,60}\b(user|owner|anyone)\b/i],
+  ["fake_system_instruction", /\b(system|developer|admin)\s+(instructions?|prompts?|override)\b/i],
+  ["concealment", /\bdo not (mention|tell|inform|reveal|notify)\b[^.\n]{0,60}\b(the user|the owner|your owner|the account holder)\b/i],
   [
     "exfiltration_request",
-    /\b(forward|email|send|share|mail)\b[^\n]{0,60}\b(all|every)\b[^\n]{0,60}\b(statements?|contacts?|passwords?|emails?|documents?|messages?)\b/i,
+    // Needs an external target on the same line (address or URL): "send all documents listed below to the branch office" is ordinary mail.
+    /\b(forward|email|send|share|mail)\b[^\n]{0,60}\b(all|every)\b[^\n]{0,60}\b(statements?|contacts?|passwords?|emails?|documents?|messages?)\b[^\n]*(@|https?:\/\/|www\.)/i,
   ],
 ];
 
@@ -132,4 +151,15 @@ export function detectInjection(text: string): { pattern: string; text: string }
     }
   }
   return out;
+}
+
+const LOOSE_EXFIL = /\b(forward|email|send|share|mail)\b[^\n]{0,60}\b(all|every)\b[^\n]{0,60}\b(statements?|contacts?|passwords?|emails?|documents?|messages?)\b/i;
+
+/**
+ * Stricter check for extractor OUTPUT FIELDS (title, counterparty, quote). A field has no legitimate reason to contain a
+ * "send/forward all X" instruction even without an address, so the address-free exfiltration wording is rejected here,
+ * while whole emails are not flagged for it (see exfiltration_request above).
+ */
+export function detectInstructionLike(field: string): boolean {
+  return detectInjection(field).length > 0 || LOOSE_EXFIL.test(field);
 }

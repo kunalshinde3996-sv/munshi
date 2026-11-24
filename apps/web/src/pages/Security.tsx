@@ -63,7 +63,7 @@ export default function Security({ onOpenEmail }: { onOpenEmail: (id: string) =>
               <div className="flex flex-wrap items-center gap-2">
                 <button onClick={() => onOpenEmail(e.id)} className="font-medium hover:underline">{e.subject}</button>
                 <span className="text-xs text-stone-500">{e.from}</span>
-                {e.flags.hiddenContent.length > 0 && <Chip tone="amber">hidden content removed</Chip>}
+                {e.flags.hiddenContent.some((h) => h.suspicious !== false) && <Chip tone="amber">hidden content removed</Chip>}
                 {e.flags.injectionSuspected.length > 0 && <Chip tone="red">prompt injection suspected</Chip>}
                 {e.flags.rejectedObligations.length > 0 && <Chip tone="red">extractor output rejected</Chip>}
               </div>

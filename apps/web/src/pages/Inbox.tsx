@@ -150,7 +150,7 @@ export default function Inbox({ health, onActionsChange, goToApprovals }: { heal
   };
 
   const failed = emails.filter((e) => e.status === "extraction_failed");
-  const flagged = emails.filter((e) => e.flags && (e.flags.hiddenContent.length || e.flags.injectionSuspected.length || e.flags.rejectedObligations.length));
+  const flagged = emails.filter((e) => e.flags && (e.flags.hiddenContent.some((h) => h.suspicious !== false) || e.flags.injectionSuspected.length || e.flags.rejectedObligations.length));
   const quiet = emails.filter((e) => e.status === "done" && e.obligationCount === 0 && !flagged.includes(e));
   const llmReady = health?.llmConfigured ?? false;
 
@@ -255,7 +255,7 @@ export default function Inbox({ health, onActionsChange, goToApprovals }: { heal
                 <div className="flex flex-wrap items-center gap-2">
                   <button onClick={() => setOpen(e.id)} className="font-medium hover:underline">{e.subject}</button>
                   <span className="text-xs text-stone-500">{e.from}</span>
-                  {e.flags!.hiddenContent.length > 0 && <Chip tone="amber">hidden content removed</Chip>}
+                  {e.flags!.hiddenContent.some((h) => h.suspicious !== false) && <Chip tone="amber">hidden content removed</Chip>}
                   {e.flags!.injectionSuspected.length > 0 && <Chip tone="red">prompt injection suspected</Chip>}
                   {e.flags!.rejectedObligations.length > 0 && <Chip tone="red">{e.flags!.rejectedObligations.length} output rejected</Chip>}
                   {e.obligationCount === 0 && <Chip tone="stone">no obligations taken</Chip>}

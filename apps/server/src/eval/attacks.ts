@@ -84,7 +84,7 @@ export interface EvalResult {
 }
 
 const flagCounts = (f: SecurityFlags | null) => ({
-  hidden: f?.hiddenContent.length ?? 0,
+  hidden: f?.hiddenContent.filter((h) => h.suspicious).length ?? 0,
   injection: f?.injectionSuspected.length ?? 0,
   rejectedObligations: f?.rejectedObligations.length ?? 0,
 });

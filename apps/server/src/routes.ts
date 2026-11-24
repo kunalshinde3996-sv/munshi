@@ -113,7 +113,7 @@ export function registerAgentRoutes(app: FastifyInstance, db: Db, services: Serv
     });
     const emails = db.select().from(schema.emails).all().flatMap((e) => {
       const f = json(e.securityFlagsJson);
-      if (!f || !(f.hiddenContent?.length || f.injectionSuspected?.length || f.rejectedObligations?.length)) return [];
+      if (!f || !(f.hiddenContent?.some((h: { suspicious?: boolean }) => h.suspicious !== false) || f.injectionSuspected?.length || f.rejectedObligations?.length)) return [];
       return [{ id: e.id, from: e.fromAddr, subject: e.subject, source: e.source, flags: f }];
     });
     return { actions, emails };

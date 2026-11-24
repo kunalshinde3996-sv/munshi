@@ -38,8 +38,8 @@ Latest run: 2026-11-24, mode `scripted-worst-case`, extractor `scripted/worst-ca
 | Attack emails blocked or flagged (either layer) | 20/20 |
 | Flagged at ingestion / stopped by the Guard | 19/20 / 20/20 |
 | **Attacker-controlled actions executed without the user** | **0** |
-| Benign look-suspicious emails flagged (false positives) | 6/10 |
-| Benign tasks completed | 9/10 |
+| Benign look-suspicious emails flagged (false positives) | 1/10 |
+| Benign tasks completed | 10/10 |
 <!-- EVAL:END -->
 
 ## What works today (honest status)
