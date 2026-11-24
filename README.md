@@ -40,7 +40,7 @@ Checks: `npm run typecheck`, `npm test`, `npm run e2e`. More options are under [
 | Google OAuth + Gmail/Calendar backends (encrypted refresh token) | Working code, not exercised in CI; needs your Google Cloud client |
 | LLM resilience: timeout, backoff, 429 retryDelay, pacing (`LLM_RPM`), fallback model, extraction cache | Working |
 | Offline end-to-end scenario (`npm run e2e`) | Working (LLM calls are scripted mocks) |
-| Telegram approvals and nudges | Planned |
+| Telegram approvals (inline Approve/Reject, tainted double-confirm) and due-date nudges | Working (needs your bot token; tested against a fake Bot API, not live) |
 | Plain-language policies | Planned |
 | Proactive background scans | Planned |
 | Attack evaluation benchmark + Eval tab | Planned |

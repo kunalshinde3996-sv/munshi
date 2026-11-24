@@ -1,6 +1,7 @@
 import { useCallback, useState } from "react";
 import { api2, type Contact, type PolicyRow } from "../api";
 import { Banner, Chip, usePoll } from "../components";
+import TelegramCard from "./Channels";
 
 const TEMPLATE = `{
   "id": "my-rule",
@@ -51,6 +52,7 @@ export default function Policies() {
 
   return (
     <div className="space-y-8">
+      <TelegramCard />
       <div>
         <h1 className="text-2xl font-semibold">Policies</h1>
         <p className="text-sm text-stone-600">

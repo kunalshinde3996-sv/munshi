@@ -20,6 +20,7 @@ const madeAgent = createAgentLlm(config);
 const services = createServices({ config, db, mcp, ...("agent" in madeAgent ? { agent: madeAgent.agent } : { agentError: madeAgent.error }) });
 services.executor.startScheduler();
 services.runtime?.recover();
+services.telegram?.start();
 const app = buildApp({
   config, db, mcp, services, google,
   ...("llm" in made ? { llm: made.llm } : { llmError: made.error }),

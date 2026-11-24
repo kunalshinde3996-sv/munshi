@@ -112,7 +112,7 @@ export function buildApp({ config, db, mcp, llm, llmError, services, google }: A
   registerAgentRoutes(app, db, services);
   registerGoogleRoutes(app, config, google);
 
-  if (services) app.addHook("onClose", async () => { services.executor.stopScheduler(); await services.runtime?.whenIdle(); });
+  if (services) app.addHook("onClose", async () => { services.executor.stopScheduler(); await services.telegram?.stop(); await services.runtime?.whenIdle(); });
   if (mcp) app.addHook("onClose", async () => mcp.close());
   return app;
 }

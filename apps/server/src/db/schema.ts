@@ -142,3 +142,19 @@ export const provenance = sqliteTable("provenance", {
   hidden: integer("hidden", { mode: "boolean" }).notNull().default(false),
   createdAt: integer("created_at").notNull().default(now),
 });
+
+/**
+ * Outbound notifications, deduplicated per (kind, ref). `approval` rows are written when an approval request is sent to a
+ * channel; `nudge` rows are created by the nudge sync (due within 48h and not handled) and delivered by channels later.
+ */
+export const notifications = sqliteTable(
+  "notifications",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    kind: text("kind", { enum: ["approval", "nudge"] }).notNull(),
+    refId: text("ref_id").notNull(),
+    createdAt: integer("created_at").notNull().default(now),
+    telegramSentAt: integer("telegram_sent_at"),
+  },
+  (t) => [uniqueIndex("notifications_kind_ref").on(t.kind, t.refId)],
+);

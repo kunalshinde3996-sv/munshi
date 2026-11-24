@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import RunPanel from "./RunPanel";
-import { api, type EmailDetail, type EmailRow, type Health, type Obligation, type ScanSummary } from "../api";
+import { usePoll } from "../components";
+import { api, channelsApi, type Nudge, type EmailDetail, type EmailRow, type Health, type Obligation, type ScanSummary } from "../api";
 
 const TYPE_STYLE: Record<string, string> = {
   bill: "bg-rose-100 text-rose-800",
@@ -119,6 +120,8 @@ export default function Inbox({ health, onActionsChange, goToApprovals }: { heal
   const [summary, setSummary] = useState<ScanSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [open, setOpen] = useState<string | null>(null);
+  const [nudges, setNudges] = useState<Nudge[]>([]);
+  usePoll(async () => setNudges(await channelsApi.nudges().catch(() => [])), 15000);
 
   const refresh = useCallback(async () => {
     const [o, e] = await Promise.all([api.obligations(), api.emails()]);
@@ -186,6 +189,19 @@ export default function Inbox({ health, onActionsChange, goToApprovals }: { heal
           {summary.obligations} new obligations. {summary.hiddenContentEmails > 0 && `${summary.hiddenContentEmails} had hidden content. `}
           {summary.injectionEmails > 0 && `${summary.injectionEmails} look like prompt-injection attempts.`}
         </p>
+      )}
+
+      {nudges.length > 0 && (
+        <section className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950" aria-label="Due soon">
+          <h2 className="mb-1 font-semibold">Due within 48 hours, not handled yet ({nudges.length})</h2>
+          <ul className="list-disc pl-5">
+            {nudges.map((n) => (
+              <li key={n.obligationId}>
+                {n.title}{n.amount != null && ` (${n.currency ?? ""} ${n.amount})`}, due {n.dueDate}
+              </li>
+            ))}
+          </ul>
+        </section>
       )}
 
       <RunPanel health={health} obligationCount={obligations.length} onChange={onActionsChange} goToApprovals={goToApprovals} />

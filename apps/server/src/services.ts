@@ -6,17 +6,22 @@ import { Guard } from "./guard/guard.js";
 import type { AgentLlm } from "./llm/agent.js";
 import type { McpHub } from "./mcp/hub.js";
 import { USER_ID } from "./scan.js";
+import { TelegramApi, type FetchFn } from "./telegram/api.js";
+import { TelegramChannel } from "./telegram/channel.js";
 
 export interface Services {
   guard: Guard;
   executor: ActionExecutor;
   /** Absent when no tool-calling LLM is configured; `agentError` says why. */
   runtime?: AgentRuntime;
+  /** Present only when TELEGRAM_BOT_TOKEN is set; call `.start()` to begin long polling. */
+  telegram?: TelegramChannel;
   agentError?: string;
 }
 
 export function createServices(opts: {
-  config: Pick<Config, "SEND_HOLD_SECONDS">;
+  config: Pick<Config, "SEND_HOLD_SECONDS"> & Partial<Pick<Config, "TELEGRAM_BOT_TOKEN" | "TELEGRAM_CHAT_ID">>;
+  telegramFetch?: FetchFn;
   db: Db;
   mcp: McpHub;
   agent?: AgentLlm;
@@ -33,5 +38,9 @@ export function createServices(opts: {
     onSettled: (a) => runtime?.onActionSettled(a),
   });
   if (agent) runtime = new AgentRuntime({ db, mcp, guard, executor, agent, userId: USER_ID });
-  return { guard, executor, runtime, agentError: agent ? undefined : opts.agentError };
+  const token = config.TELEGRAM_BOT_TOKEN?.trim();
+  const telegram = token
+    ? new TelegramChannel(db, executor, new TelegramApi(token, opts.telegramFetch), config.TELEGRAM_CHAT_ID?.trim() || undefined, { log: (m) => console.warn(m) })
+    : undefined;
+  return { guard, executor, runtime, telegram, agentError: agent ? undefined : opts.agentError };
 }

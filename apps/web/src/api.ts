@@ -158,3 +158,10 @@ export const googleApi = {
   setMode: (mode: "sandbox" | "google") => post<GoogleStatus>("/api/settings/mode", { mode }),
   disconnect: () => post<GoogleStatus>("/api/google/disconnect"),
 };
+
+export type TelegramStatus = { configured: boolean; linked: boolean; polling: boolean; bot: string | null; lastError: string | null; setup: string[] };
+export type Nudge = { obligationId: string; title: string; type: string; dueDate: string | null; dueAt: number; amount: number | null; currency: string | null; counterparty: string | null };
+export const channelsApi = {
+  telegram: () => req<TelegramStatus>("/api/telegram"),
+  nudges: () => req<{ nudges: Nudge[] }>("/api/nudges").then((r) => r.nudges),
+};

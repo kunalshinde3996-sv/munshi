@@ -22,6 +22,11 @@ const Env = z.object({
   GOOGLE_CLIENT_SECRET: z.string().optional(),
   GOOGLE_REDIRECT_URI: z.string().default("http://localhost:8787/auth/google/callback"),
   WEB_ORIGIN: z.string().default("http://localhost:5173"),
+  /** Telegram channel (optional). Without a token the feature reports "Not configured". */
+  TELEGRAM_BOT_TOKEN: z.string().optional(),
+  TELEGRAM_CHAT_ID: z.string().optional(),
+  /** Background scan period in minutes (0 disables). Never runs in tests. */
+  SCAN_INTERVAL_MIN: z.coerce.number().min(0).default(30),
   SEND_HOLD_SECONDS: z.coerce.number().default(60),
 });
 

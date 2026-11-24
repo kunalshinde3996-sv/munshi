@@ -47,22 +47,22 @@ export class ActionExecutor {
 
   // ---- approvals ----
 
-  async approve(id: string, opts: { acknowledgeTaint?: boolean } = {}): Promise<ActionRow> {
+  async approve(id: string, opts: { acknowledgeTaint?: boolean; channel?: "web" | "telegram" } = {}): Promise<ActionRow> {
     const a = this.get(id);
     if (a.status !== "pending_approval") throw new ActionError(`Action is ${a.status}, not pending approval`, 409);
     if (a.tainted && !opts.acknowledgeTaint)
       throw new ActionError("This action involves a value that came from email content, not from you. Acknowledge the warning to approve.", 400);
     this.set(id, { status: "approved" });
-    audit(this.db, { event: "approved", actor: "user", runId: a.runId, actionId: id, detail: { approvedBy: "user", acknowledgedTaint: Boolean(opts.acknowledgeTaint) } });
+    audit(this.db, { event: "approved", actor: "user", runId: a.runId, actionId: id, detail: { approvedBy: "user", channel: opts.channel ?? "web", acknowledgedTaint: Boolean(opts.acknowledgeTaint) } });
     await this.executeApproved(id);
     return this.get(id);
   }
 
-  reject(id: string): ActionRow {
+  reject(id: string, opts: { channel?: "web" | "telegram" } = {}): ActionRow {
     const a = this.get(id);
     if (a.status !== "pending_approval") throw new ActionError(`Action is ${a.status}, not pending approval`, 409);
     this.set(id, { status: "rejected" });
-    audit(this.db, { event: "rejected", actor: "user", runId: a.runId, actionId: id, detail: { rejectedBy: "user" } });
+    audit(this.db, { event: "rejected", actor: "user", runId: a.runId, actionId: id, detail: { rejectedBy: "user", channel: opts.channel ?? "web" } });
     this.opts.onSettled?.(this.get(id));
     return this.get(id);
   }

@@ -10,6 +10,8 @@ import { PolicyRule } from "./guard/policy.js";
 import { normalizeAddress } from "./guard/provenance.js";
 import type { Services } from "./services.js";
 import { USER_ID } from "./scan.js";
+import { listNudges } from "./nudges.js";
+import { TELEGRAM_SETUP } from "./telegram/channel.js";
 
 const json = (s: string | null) => {
   if (!s) return null;
@@ -78,7 +80,7 @@ export function registerAgentRoutes(app: FastifyInstance, db: Db, services: Serv
   app.post("/api/actions/:id/approve", async (req) => {
     const { id } = z.object({ id: z.string() }).parse(req.params);
     const { acknowledgeTaint } = z.object({ acknowledgeTaint: z.boolean().optional() }).parse(req.body ?? {});
-    return { action: serializeAction(await exec().approve(id, { acknowledgeTaint })) };
+    return { action: serializeAction(await exec().approve(id, { acknowledgeTaint, channel: "web" })) };
   });
   app.post("/api/actions/:id/reject", async (req) => {
     const { id } = z.object({ id: z.string() }).parse(req.params);
@@ -88,6 +90,14 @@ export function registerAgentRoutes(app: FastifyInstance, db: Db, services: Serv
     const { id } = z.object({ id: z.string() }).parse(req.params);
     return { action: serializeAction(await exec().undo(id)) };
   });
+
+  // ---- channels + nudges ----
+  app.get("/api/telegram", async () =>
+    services?.telegram
+      ? services.telegram.status()
+      : { configured: false, linked: false, polling: false, bot: null, lastError: null, setup: TELEGRAM_SETUP },
+  );
+  app.get("/api/nudges", async () => ({ nudges: listNudges(db) }));
 
   /**
    * Security view: every blocked or tainted action with the exact rule that fired and the email that introduced the value,

@@ -116,6 +116,14 @@ Every tool declares: `riskTier`, `reversible`, `undoTool?`, `verifyTool?`, `sens
 - API hardening in app.ts: Origin allowlist for non-GET, Host must be localhost (CSRF / DNS rebinding).
 - README.md: setup, demo, mermaid diagram, threat model, honest known-gaps list.
 
+## Telegram + nudges (Phase 2, C1) - apps/server/src/telegram, nudges.ts
+- `TelegramApi`: plain-fetch Bot API client, long polling (`getUpdates`), no webhook. Plain-text messages only (email-derived text can't inject formatting). Token never logged.
+- `TelegramChannel`: only `TELEGRAM_CHAT_ID` can act; other chats get only their chat id from `/start`. Approval requests (preview + provenance warning + Approve/Reject buttons) are sent once
+  (`notifications` table dedupes). Decisions call `ActionExecutor.approve/reject(..., {channel:"telegram"})`: same Guard path, audit detail records the channel.
+  Tainted: first tap shows a warning + "Confirm anyway" (nothing approved); only the second tap passes `acknowledgeTaint`.
+- Nudges: `syncNudges` creates a `notifications(kind=nudge)` row for each obligation due within 48h with no pending/approved/held/executed/verified action; delivered once to Telegram, shown in the Inbox banner (`GET /api/nudges`).
+- No token -> `GET /api/telegram` = `{configured:false}` + setup steps; UI shows "Not configured"; nothing else changes.
+
 ## Seed policies
 Never auto-send email; block tainted send_email to non-allowlisted recipients;
 auto-allow calendar reminders for obligations with confidence >= 0.8.
