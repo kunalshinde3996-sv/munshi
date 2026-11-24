@@ -10,7 +10,7 @@ import { decryptJson, encryptJson } from "../src/google/crypto.js";
 import { GoogleConnection, REQUIRED_SCOPES, type OAuthProvider } from "../src/google/connection.js";
 import { GoogleAuthToolError } from "../src/mcp/hub.js";
 import { ensureUser, scanInbox } from "../src/scan.js";
-import { MockLlm } from "./helpers.js";
+import { MockLlm, withSession } from "./helpers.js";
 
 const KEY = Buffer.alloc(32, 7).toString("base64");
 const b64u = (s: string) => Buffer.from(s, "utf8").toString("base64").replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
@@ -140,7 +140,7 @@ describe("Google HTTP routes + honest mode reporting", () => {
   it("status / start / callback / mode endpoints; health.mode reflects the database", async () => {
     const { provider } = fakeProvider();
     const { c, db } = conn({ provider });
-    const app = buildApp({ config: loadConfig({}), db, google: c });
+    const app = withSession(buildApp({ config: loadConfig({}), db, google: c }), db);
 
     expect((await app.inject({ method: "GET", url: "/api/health" })).json()).toMatchObject({ mode: "sandbox" });
     const start = await app.inject({ method: "GET", url: "/auth/google/start" });
@@ -166,7 +166,7 @@ describe("Google HTTP routes + honest mode reporting", () => {
 
   it("unconfigured: start returns a clear 400 and switching to google is refused", async () => {
     const { c, db } = conn({ cfg: { GOOGLE_CLIENT_ID: undefined } });
-    const app = buildApp({ config: loadConfig({}), db, google: c });
+    const app = withSession(buildApp({ config: loadConfig({}), db, google: c }), db);
     const s = await app.inject({ method: "GET", url: "/auth/google/start" });
     expect(s.statusCode).toBe(400);
     expect(s.json().error).toContain("GOOGLE_CLIENT_ID");
@@ -176,7 +176,7 @@ describe("Google HTTP routes + honest mode reporting", () => {
   it("a revoked Google grant during a scan surfaces as 401 google_auth", async () => {
     const { c, db } = conn({ provider: fakeProvider().provider });
     const mcp = { callTool: async () => { throw new GoogleAuthToolError("Google access was revoked or has expired. Reconnect Google in Munshi."); }, close: async () => undefined } as never;
-    const app = buildApp({ config: loadConfig({}), db, mcp, llm: new MockLlm(() => "{}"), google: c });
+    const app = withSession(buildApp({ config: loadConfig({}), db, mcp, llm: new MockLlm(() => "{}"), google: c }), db);
     const res = await app.inject({ method: "POST", url: "/api/scan", payload: {} });
     expect(res.statusCode).toBe(401);
     expect(res.json()).toMatchObject({ code: "google_auth" });

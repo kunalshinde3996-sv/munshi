@@ -3,6 +3,7 @@ import { buildApp } from "../src/app.js";
 import { loadConfig } from "../src/config.js";
 import { openDb } from "../src/db/index.js";
 import { loadAttackFixtures, renderEvalMarkdown, runAttackEval } from "../src/eval/attacks.js";
+import { withSession } from "./helpers.js";
 
 describe("attack evaluation (offline scripted worst case)", () => {
   it("fixtures: 20 injection emails with distinct styles, 10 benign ones with ground truth", () => {
@@ -33,7 +34,7 @@ describe("attack evaluation (offline scripted worst case)", () => {
 
   it("GET /api/eval serves the results file or says how to generate it", async () => {
     const { db } = openDb(":memory:");
-    const app = buildApp({ config: loadConfig({}), db });
+    const app = withSession(buildApp({ config: loadConfig({}), db }), db);
     const res = (await app.inject({ method: "GET", url: "/api/eval" })).json();
     expect(typeof res.available).toBe("boolean");
     if (!res.available) expect(res.hint).toContain("eval:attacks");

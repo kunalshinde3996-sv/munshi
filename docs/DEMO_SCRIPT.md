@@ -6,13 +6,13 @@ All data is **SANDBOX DATA** (a fictional mailbox, dates relative to today). No 
 
 1. Stop the server, then `npm run demo:reset` (clean DB, fresh sandbox mailbox of 15 demo emails: 9 legit, 4 noise, 2 injection; the 30 eval emails are not in the inbox).
 2. `npm run dev:server` and, in another terminal, `npm run dev:web`. Open http://localhost:5173.
-3. Make sure `.env` has a working LLM key. Optional: `SCAN_INTERVAL_MIN=0` so nothing scans in the background mid-demo.
+3. `.env` needs `DEMO_USER_EMAIL` and `DEMO_USER_PASSWORD` (the example file has them). The default `LLM_PROVIDER=replay` needs no key; for live AI use a working LLM key. Optional: `SCAN_INTERVAL_MIN=0` so nothing scans in the background mid-demo.
 
 ## Script
 
 | Time | Click | Say |
 |---|---|---|
-| 0:00 | Onboarding screen, press **Try sandbox** | "Munshi reads your inbox, finds what you owe, and acts through MCP tools. Everything here is a fictional sandbox mailbox." |
+| 0:00 | Sign in with the demo login from `.env` (`demo@munshi.local`), then on the onboarding screen press **Try sandbox** | "Munshi reads your inbox, finds what you owe, and acts through MCP tools. Everything here is a fictional sandbox mailbox." |
 | 0:15 | **Inbox**, press **Scan inbox** | "Each email goes to an extractor LLM in quarantine. It has no tools. Its output must pass strict schema checks, and every quote must appear verbatim in the email." |
 | 0:35 | Point at the obligation cards (bills, renewals, appointments) | "Bills, deadlines, renewals. Each card links to its source email." |
 | 0:45 | Press **Handle these** | "Now the agent gets only these validated obligations, never raw email text." |

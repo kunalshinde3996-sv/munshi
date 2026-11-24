@@ -11,7 +11,7 @@ import { listNudges, syncNudges } from "../src/nudges.js";
 import { ensureUser, scanInbox } from "../src/scan.js";
 import { createServices } from "../src/services.js";
 import type { FetchFn } from "../src/telegram/api.js";
-import { MockAgent, MockLlm, obligationJson, obligationsFrom } from "./helpers.js";
+import { MockAgent, MockLlm, obligationJson, obligationsFrom, withSession } from "./helpers.js";
 
 let dir: string;
 let hub: McpHub;
@@ -163,7 +163,7 @@ describe("Telegram channel", () => {
     ensureUser(db);
     const services = createServices({ config: { SEND_HOLD_SECONDS: 60 }, db, mcp: hub });
     expect(services.telegram).toBeUndefined();
-    const app = buildApp({ config: loadConfig({}), db, mcp: hub, services });
+    const app = withSession(buildApp({ config: loadConfig({}), db, mcp: hub, services }), db);
     const res = (await app.inject({ method: "GET", url: "/api/telegram" })).json();
     expect(res).toMatchObject({ configured: false, linked: false });
     expect(res.setup.length).toBeGreaterThan(2);

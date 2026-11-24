@@ -76,6 +76,13 @@ export const onErrorToast = (fn: ToastListener) => {
   return () => void toastListeners.delete(fn);
 };
 
+const unauthListeners = new Set<() => void>();
+/** Called when any API request comes back 401 (session expired / logged out elsewhere). */
+export const onUnauthorized = (fn: () => void) => {
+  unauthListeners.add(fn);
+  return () => void unauthListeners.delete(fn);
+};
+
 async function req<T>(path: string, init?: RequestInit): Promise<T> {
   const isWrite = (init?.method ?? "GET").toUpperCase() !== "GET";
   let res: Response;
@@ -87,6 +94,10 @@ async function req<T>(path: string, init?: RequestInit): Promise<T> {
     throw e;
   }
   const body = await res.json().catch(() => ({}));
+  if (res.status === 401 && !path.startsWith("/api/auth/login") && !path.startsWith("/api/auth/me")) {
+    unauthListeners.forEach((f) => f());
+    throw new Error("Your session has ended. Please sign in again.");
+  }
   if (!res.ok) {
     const msg = (body as { error?: string }).error ?? `HTTP ${res.status}`;
     if (isWrite) toastListeners.forEach((f) => f(msg));
@@ -211,3 +222,11 @@ export type EvalResult = {
   stress: { pendingAttackerActions: number; approved: number; effectsCreated: number; stillBlocked: number };
 };
 export const evalApi = { latest: () => req<{ available: boolean; hint?: string; result?: EvalResult }>("/api/eval") };
+
+export type AuthUser = { email: string };
+export const authApi = {
+  me: () => req<{ user: AuthUser }>("/api/auth/me").then((r) => r.user),
+  login: (email: string, password: string) =>
+    req<{ user: AuthUser }>("/api/auth/login", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email, password }) }).then((r) => r.user),
+  logout: () => req<{ ok: boolean }>("/api/auth/logout", { method: "POST", headers: { "content-type": "application/json" }, body: "{}" }),
+};

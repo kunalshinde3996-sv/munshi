@@ -37,6 +37,9 @@ const Env = z.object({
   TELEGRAM_CHAT_ID: z.string().optional(),
   /** Background scan period in minutes (0 disables). Never runs in tests. */
   SCAN_INTERVAL_MIN: z.coerce.number().min(0).default(30),
+  /** Single demo login, seeded at startup (no registration, no password reset). Without both, nobody can sign in. */
+  DEMO_USER_EMAIL: z.string().optional(),
+  DEMO_USER_PASSWORD: z.string().optional(),
   SEND_HOLD_SECONDS: z.coerce.number().default(60),
 });
 

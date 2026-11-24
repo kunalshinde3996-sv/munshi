@@ -8,6 +8,7 @@ import { sanitizeEmailBody } from "./extraction/sanitize.js";
 import { REPLAY_BANNER } from "./llm/replay.js";
 import { LlmError, type LlmAdapter } from "./llm/types.js";
 import { GoogleAuthToolError, type McpHub } from "./mcp/hub.js";
+import { AuthService, RateLimiter, clearedCookie, readCookie, SESSION_COOKIE, sessionCookie } from "./auth.js";
 import { registerAgentRoutes } from "./routes.js";
 import { registerGoogleRoutes } from "./routes-google.js";
 import type { GoogleConnection } from "./google/connection.js";
@@ -45,7 +46,7 @@ export function buildApp({ config, db, mcp, llm, llmError, services, google, sch
   // Local single-user app: only the Munshi web UI may call the API from a browser. This blocks other websites
   // (CSRF, e.g. a page that POSTs /api/actions/:id/approve) and DNS-rebinding attempts.
   const allowedOrigins = new Set([config.WEB_ORIGIN, `http://localhost:${config.PORT}`, `http://127.0.0.1:${config.PORT}`, "http://127.0.0.1:5173"]);
-  app.register(cors, { origin: [...allowedOrigins] });
+  app.register(cors, { origin: [...allowedOrigins], credentials: true });
   app.addHook("onRequest", async (req, reply) => {
     const host = (req.headers.host ?? "").replace(/:\d+$/, "");
     if (host && !["localhost", "127.0.0.1", "[::1]"].includes(host)) return reply.code(403).send({ error: "Forbidden host" });
@@ -53,6 +54,35 @@ export function buildApp({ config, db, mcp, llm, llmError, services, google, sch
     if (req.method !== "GET" && req.method !== "OPTIONS" && origin && !allowedOrigins.has(origin)) {
       return reply.code(403).send({ error: "Cross-origin request blocked" });
     }
+  });
+
+  // ---- authentication (single user, seeded from env; no registration, no password reset) ----
+  const auth = new AuthService(db);
+  const loginLimiter = new RateLimiter();
+  const PUBLIC = new Set(["/api/health", "/api/auth/login", "/api/auth/logout", "/auth/google/callback"]);
+  app.addHook("onRequest", async (req, reply) => {
+    const path = req.url.split("?")[0]!;
+    if (req.method === "OPTIONS" || PUBLIC.has(path)) return;
+    if (!path.startsWith("/api/") && path !== "/auth/google/start") return;
+    if (!auth.check(readCookie(req.headers.cookie, SESSION_COOKIE))) return reply.code(401).send({ error: "Not signed in" });
+  });
+
+  app.post("/api/auth/login", async (req, reply) => {
+    const wait = loginLimiter.hit(req.ip);
+    if (wait) return reply.code(429).header("retry-after", String(wait)).send({ error: `Too many login attempts. Try again in ${wait}s.` });
+    const body = z.object({ email: z.string().min(1).max(200), password: z.string().min(1).max(500) }).safeParse(req.body);
+    if (!body.success) return reply.code(400).send({ error: "Email and password are required" });
+    const r = await auth.login(body.data.email, body.data.password);
+    if (!r) return reply.code(401).send({ error: "Wrong email or password" });
+    return reply.header("set-cookie", sessionCookie(r.token)).send({ user: { email: r.session.email }, expiresAt: r.session.expiresAt });
+  });
+  app.post("/api/auth/logout", async (req, reply) => {
+    auth.logout(readCookie(req.headers.cookie, SESSION_COOKIE));
+    return reply.header("set-cookie", clearedCookie()).send({ ok: true });
+  });
+  app.get("/api/auth/me", async (req) => {
+    const s = auth.check(readCookie(req.headers.cookie, SESSION_COOKIE))!; // the hook already rejected anonymous requests
+    return { user: { email: s.email }, expiresAt: s.expiresAt };
   });
 
   app.get("/api/health", async () => ({

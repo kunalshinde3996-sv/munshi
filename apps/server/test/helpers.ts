@@ -37,3 +37,29 @@ export function obligationsFrom(messages: AgentMessage[]): { id: string; type: s
   const m = /<untrusted_obligations>\n([\s\S]*?)\n<\/untrusted_obligations>/.exec(first.text);
   return JSON.parse(m![1]!);
 }
+
+import { createHash, randomBytes } from "node:crypto";
+import type { FastifyInstance } from "fastify";
+import type { Db } from "../src/db/index.js";
+import { schema } from "../src/db/index.js";
+import { SESSION_COOKIE } from "../src/auth.js";
+import { USER_ID } from "../src/scan.js";
+
+/**
+ * Gives an app a real server-side session (same table/cookie the login route uses) and makes `app.inject` send it,
+ * so tests exercise the authenticated API. Login/logout/rate-limit behaviour is tested separately in auth.test.ts.
+ */
+export function withSession<T extends FastifyInstance>(app: T, db: Db, email = "tester@munshi.local"): T {
+  const token = randomBytes(24).toString("base64url");
+  const existing = db.select().from(schema.users).all().length;
+  if (!existing) db.insert(schema.users).values({ id: USER_ID, email: "tester@example.com" }).onConflictDoNothing().run();
+  const authId = `auth-${token.slice(0, 6)}`;
+  db.insert(schema.authUsers).values({ id: authId, email: `${authId}-${email}`, passwordHash: "x", userId: USER_ID }).run();
+  db.insert(schema.sessions).values({ id: createHash("sha256").update(token).digest("hex"), authUserId: authId, expiresAt: Date.now() + 3_600_000 }).run();
+  const orig = app.inject.bind(app) as (o: unknown) => unknown;
+  (app as unknown as { inject: (o: unknown) => unknown }).inject = (opts: unknown) => {
+    const o = (typeof opts === "string" ? { url: opts } : opts) as { headers?: Record<string, string> };
+    return orig({ ...o, headers: { cookie: `${SESSION_COOKIE}=${token}`, ...(o.headers ?? {}) } });
+  };
+  return app;
+}

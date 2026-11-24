@@ -10,6 +10,7 @@ import { REPLAY_BANNER } from "../src/llm/replay.js";
 import { McpHub } from "../src/mcp/hub.js";
 import { ensureUser } from "../src/scan.js";
 import { createServices } from "../src/services.js";
+import { withSession } from "./helpers.js";
 
 let dir: string;
 let hub: McpHub;
@@ -31,7 +32,7 @@ describe("LLM_PROVIDER=replay (no API key)", () => {
     expect("llm" in llm && "agent" in agent).toBe(true);
     const { db } = openDb(":memory:");
     ensureUser(db);
-    const app = buildApp({ config, db, mcp: hub, llm: (llm as { llm: never }).llm, services: createServices({ config, db, mcp: hub, agent: (agent as { agent: never }).agent }) });
+    const app = withSession(buildApp({ config, db, mcp: hub, llm: (llm as { llm: never }).llm, services: createServices({ config, db, mcp: hub, agent: (agent as { agent: never }).agent }) }), db);
     const h = (await app.inject({ method: "GET", url: "/api/health" })).json();
     expect(h.replay).toBe(true);
     expect(h.replayBanner).toBe(REPLAY_BANNER);
@@ -45,7 +46,7 @@ describe("LLM_PROVIDER=replay (no API key)", () => {
     const llm = (createLlm(config) as { llm: never }).llm;
     const agent = (createAgentLlm(config) as { agent: never }).agent;
     const services = createServices({ config, db, mcp: hub, agent });
-    const app = buildApp({ config, db, mcp: hub, llm, services });
+    const app = withSession(buildApp({ config, db, mcp: hub, llm, services }), db);
     const get = async (url: string) => (await app.inject({ method: "GET", url })).json();
 
     const scan = (await app.inject({ method: "POST", url: "/api/scan", payload: {} })).json();

@@ -150,6 +150,11 @@ Every tool declares: `riskTier`, `reversible`, `undoTool?`, `verifyTool?`, `sens
 - The recording is AUTHORED to match the sandbox fixtures, not captured from a live model. Its output goes through the same schema check, vetting and Guard as live output.
 - `/api/health` returns `replay` + `replayBanner`; the web app shows a sticky "DEMO MODE — scripted sample outputs, not live AI" banner on every screen incl. onboarding. Switching to Google mode is refused while replaying. Telegram messages carry no replay marker (Telegram is optional and off by default).
 
+## Authentication (auth.ts, app.ts)
+- Single user, no registration/reset. `seedDemoUser` (index.ts) creates/refreshes the login from `DEMO_USER_EMAIL`/`DEMO_USER_PASSWORD`; tables `auth_users` (scrypt hash) and `sessions` (sha256(token), 12h expiry). `users` stays the mailbox owner (trusted own-address provenance).
+- `POST /api/auth/login` (rate limit 5/min per IP, 429) sets httpOnly SameSite=Strict cookie `munshi_session`; `/logout` deletes the session; `/me`. An onRequest hook returns 401 `{error:"Not signed in"}` for all `/api/*` and `/auth/google/start` except health/login/logout; `/auth/google/callback` is exempt (own CSRF nonce). Origin/Host check runs first.
+- Tests: `withSession(app, db)` (test/helpers.ts) gives an app a real session row + cookie on `app.inject`; e2e does a real login. Web: `App` is the auth gate (`Login.tsx`), any 401 returns to login, onboarding flag is per user email.
+
 ## Resilience
 - `crash-log.ts`: `installCrashHandlers` (index.ts) logs unhandledRejection/uncaughtException to console + `<db dir>/server-error.log` and keeps running; >20 in a minute exits(1). Route error handler (routes.ts) returns `{error}` JSON for every failure (4xx keep their status, others 500 "Internal error: ..."), logs the stack. An agent run failure is recorded as run status `failed` (never escapes the background task).
 

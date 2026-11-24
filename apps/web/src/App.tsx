@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
-import { api, api2, type Action, type Health } from "./api";
-import { Banner, Logo, ReplayBanner, Toaster, usePoll } from "./components";
+import { api, api2, authApi, onUnauthorized, type Action, type AuthUser, type Health } from "./api";
+import { Banner, Logo, ReplayBanner, Spinner, Toaster, usePoll } from "./components";
+import Login from "./Login";
 import Onboarding from "./Onboarding";
 import ModeControl, { ModeBadge } from "./ModeControl";
 import Activity from "./pages/Activity";
@@ -21,7 +22,19 @@ const TABS: { id: Page; label: string }[] = [
   { id: "eval", label: "Eval" },
 ];
 
+/** Auth gate: shows the login screen until /api/auth/me confirms a session; any later 401 sends you back here. */
 export default function App() {
+  const [user, setUser] = useState<AuthUser | null | undefined>(undefined); // undefined = checking
+  useEffect(() => {
+    authApi.me().then(setUser).catch(() => setUser(null));
+    return onUnauthorized(() => setUser(null));
+  }, []);
+  if (user === undefined) return <Spinner label="Checking your session…" />;
+  if (!user) return <Login onLoggedIn={setUser} />;
+  return <Shell user={user} onLoggedOut={() => setUser(null)} />;
+}
+
+function Shell({ user, onLoggedOut }: { user: AuthUser; onLoggedOut: () => void }) {
   const [health, setHealth] = useState<Health | null>(null);
   const [offline, setOffline] = useState(false);
   const [page, setPage] = useState<Page>("inbox");
@@ -44,7 +57,7 @@ export default function App() {
     window.history.replaceState({}, "", window.location.pathname);
   }, []);
 
-  const [welcomed, setWelcomed] = useState(() => localStorage.getItem("munshi.onboarded") === "1");
+  const [welcomed, setWelcomed] = useState(() => localStorage.getItem(`munshi.onboarded.${user.email}`) === "1");
   if (!welcomed) {
     return (
       <>
@@ -52,7 +65,7 @@ export default function App() {
         <Onboarding
           health={health}
           offline={offline}
-          onStart={() => { localStorage.setItem("munshi.onboarded", "1"); setWelcomed(true); void loadHealth(); }}
+          onStart={() => { localStorage.setItem(`munshi.onboarded.${user.email}`, "1"); setWelcomed(true); void loadHealth(); }}
         />
         <Toaster />
       </>
@@ -71,6 +84,13 @@ export default function App() {
           </div>
           <div className="flex flex-wrap items-center justify-end gap-3">
             <ModeControl onModeChange={() => void loadHealth()} />
+            <span className="hidden text-xs text-stone-500 md:inline" title="Signed in">{user.email}</span>
+            <button
+              onClick={() => void authApi.logout().catch(() => undefined).finally(onLoggedOut)}
+              className="rounded-lg border border-stone-300 bg-white px-3 py-1 text-xs font-medium hover:bg-stone-50"
+            >
+              Log out
+            </button>
             <ModeBadge mode={health?.mode} />
             <span className="hidden text-xs text-stone-500 sm:inline">
               {health?.replay ? "demo · scripted" : health?.llmModel ? `${health.llmProvider} · ${health.llmModel}` : "LLM not configured"}

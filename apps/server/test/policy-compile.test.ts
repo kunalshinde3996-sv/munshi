@@ -6,7 +6,7 @@ import { openDb, schema } from "../src/db/index.js";
 import { COMPILER_SYSTEM, compilePolicy, describeRule, PolicyCompileError, PolicyDrafts } from "../src/guard/policy-compile.js";
 import { evaluatePolicies, PolicyRule } from "../src/guard/policy.js";
 import { ensureUser } from "../src/scan.js";
-import { MockLlm } from "./helpers.js";
+import { MockLlm, withSession } from "./helpers.js";
 
 const professorRule = {
   description: "Ask before emailing my professor",
@@ -77,7 +77,7 @@ describe("policy compile API: LLM can only propose; the user's confirm saves", (
   function app(llm: MockLlm | undefined) {
     const { db } = openDb(":memory:");
     ensureUser(db);
-    return { db, app: buildApp({ config: loadConfig({}), db, llm, llmError: llm ? undefined : "LLM_MODEL is not set in .env" }) };
+    return { db, app: withSession(buildApp({ config: loadConfig({}), db, llm, llmError: llm ? undefined : "LLM_MODEL is not set in .env" }), db) };
   }
   const policyIds = (db: ReturnType<typeof openDb>["db"]) => db.select().from(schema.policies).all().map((p) => p.id);
 

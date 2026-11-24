@@ -119,7 +119,7 @@ export const auditLog = sqliteTable("audit_log", {
   actionId: text("action_id"),
   event: text("event", {
     enum: ["held", "hidden_content_detected", "injection_suspected", "proposed", "decision", "approved", "rejected", "executed", "verified",
-      "verification_failed", "undone", "skipped", "failed", "policy_proposed", "policy_confirmed"],
+      "verification_failed", "undone", "skipped", "failed", "policy_proposed", "policy_confirmed", "login", "login_failed", "logout"],
   }).notNull(),
   actor: text("actor").notNull(), // "agent" | "guard" | "user" | "system"
   detail: text("detail").notNull(), // JSON
@@ -158,3 +158,21 @@ export const notifications = sqliteTable(
   },
   (t) => [uniqueIndex("notifications_kind_ref").on(t.kind, t.refId)],
 );
+
+/** Login accounts (single-user: seeded from env, no registration). Distinct from `users`, whose email is the mailbox owner's own address. */
+export const authUsers = sqliteTable("auth_users", {
+  id: text("id").primaryKey(),
+  email: text("email").notNull().unique(),
+  /** scrypt$N$r$p$salt(b64)$hash(b64) */
+  passwordHash: text("password_hash").notNull(),
+  userId: text("user_id").notNull().references(() => users.id),
+  createdAt: integer("created_at").notNull().default(now),
+});
+
+/** Server-side sessions. Only sha256(token) is stored; the raw token lives in the httpOnly cookie. */
+export const sessions = sqliteTable("sessions", {
+  id: text("id").primaryKey(),
+  authUserId: text("auth_user_id").notNull().references(() => authUsers.id),
+  createdAt: integer("created_at").notNull().default(now),
+  expiresAt: integer("expires_at").notNull(),
+});

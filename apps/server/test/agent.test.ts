@@ -10,7 +10,7 @@ import { openDb, schema } from "../src/db/index.js";
 import { McpHub } from "../src/mcp/hub.js";
 import { scanInbox } from "../src/scan.js";
 import { createServices } from "../src/services.js";
-import { MockAgent, MockLlm, obligationJson, obligationsFrom } from "./helpers.js";
+import { MockAgent, MockLlm, obligationJson, obligationsFrom, withSession } from "./helpers.js";
 
 const ATTACKER = "statements-backup@sahyadri-bank-secure.example";
 let dir: string;
@@ -273,7 +273,7 @@ describe("HTTP API: runs, approvals, policies, contacts", () => {
       return { toolCalls: [{ name: "create_event", args: { title: "Amazon refund due", start: "2030-01-06T09:00:00+05:30", obligationId: amazon.id } }] };
     });
     const { services, runtime } = harness(db, agent);
-    const app = buildApp({ config: loadConfig({}), db, mcp: hub, services });
+    const app = withSession(buildApp({ config: loadConfig({}), db, mcp: hub, services }), db);
 
     expect((await app.inject({ method: "POST", url: "/api/runs", payload: { goal: "x" } })).statusCode).toBe(400);
     const { runId } = (await app.inject({ method: "POST", url: "/api/runs", payload: { goal: "Set reminders for my bills" } })).json();
@@ -300,7 +300,7 @@ describe("HTTP API: runs, approvals, policies, contacts", () => {
   it("503 when no agent is configured", async () => {
     const db = await freshDb();
     const services = createServices({ config: { SEND_HOLD_SECONDS: 60 }, db, mcp: hub, agentError: "LLM_MODEL is not set in .env" });
-    const app = buildApp({ config: loadConfig({}), db, mcp: hub, services });
+    const app = withSession(buildApp({ config: loadConfig({}), db, mcp: hub, services }), db);
     const res = await app.inject({ method: "POST", url: "/api/runs", payload: { goal: "do things" } });
     expect(res.statusCode).toBe(503);
     expect(res.json().error).toContain("LLM_MODEL");
@@ -309,7 +309,7 @@ describe("HTTP API: runs, approvals, policies, contacts", () => {
   it("policies and contacts CRUD with validation", async () => {
     const db = await freshDb();
     const services = createServices({ config: { SEND_HOLD_SECONDS: 60 }, db, mcp: hub });
-    const app = buildApp({ config: loadConfig({}), db, mcp: hub, services });
+    const app = withSession(buildApp({ config: loadConfig({}), db, mcp: hub, services }), db);
     const list = (await app.inject({ method: "GET", url: "/api/policies" })).json().policies;
     expect(list.map((p: { id: string }) => p.id)).toContain("seed-never-auto-send");
     expect(list.every((p: { valid: boolean }) => p.valid)).toBe(true);

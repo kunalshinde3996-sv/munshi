@@ -8,7 +8,7 @@ import { loadConfig } from "../src/config.js";
 import { openDb, schema } from "../src/db/index.js";
 import { McpHub } from "../src/mcp/hub.js";
 import { scanInbox } from "../src/scan.js";
-import { MockLlm, obligationJson } from "./helpers.js";
+import { MockLlm, obligationJson, withSession } from "./helpers.js";
 
 let dir: string;
 let hub: McpHub;
@@ -43,7 +43,7 @@ describe("scan + obligations API (sandbox, mock LLM)", () => {
     const { db } = openDb(":memory:");
     const state = { breakAct: true };
     const llm = scriptedLlm(state);
-    const app = buildApp({ config: loadConfig({}), db, mcp: hub, llm });
+    const app = withSession(buildApp({ config: loadConfig({}), db, mcp: hub, llm }), db);
 
     const scan = await app.inject({ method: "POST", url: "/api/scan", payload: {} });
     expect(scan.statusCode).toBe(200);
@@ -100,7 +100,7 @@ describe("scan + obligations API (sandbox, mock LLM)", () => {
 
   it("GET /api/emails/:id shows the extractor input with hidden text removed", async () => {
     const { db } = openDb(":memory:");
-    const app = buildApp({ config: loadConfig({}), db, mcp: hub, llm: scriptedLlm({ breakAct: false }) });
+    const app = withSession(buildApp({ config: loadConfig({}), db, mcp: hub, llm: scriptedLlm({ breakAct: false }) }), db);
     await app.inject({ method: "POST", url: "/api/scan", payload: {} });
     const res = (await app.inject({ method: "GET", url: "/api/emails/sbx-inject-news" })).json();
     expect(res.email.body).toContain("claim-prize"); // user's own raw mail
@@ -111,7 +111,7 @@ describe("scan + obligations API (sandbox, mock LLM)", () => {
 
   it("POST /api/scan returns 503 with the reason when no LLM is configured", async () => {
     const { db } = openDb(":memory:");
-    const app = buildApp({ config: loadConfig({}), db, mcp: hub, llmError: "LLM_MODEL is not set in .env" });
+    const app = withSession(buildApp({ config: loadConfig({}), db, mcp: hub, llmError: "LLM_MODEL is not set in .env" }), db);
     const res = await app.inject({ method: "POST", url: "/api/scan", payload: {} });
     expect(res.statusCode).toBe(503);
     expect(res.json().error).toContain("LLM_MODEL");

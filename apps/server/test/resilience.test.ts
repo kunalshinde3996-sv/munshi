@@ -9,7 +9,7 @@ import { installCrashHandlers } from "../src/crash-log.js";
 import { openDb } from "../src/db/index.js";
 import { ensureUser } from "../src/scan.js";
 import { createServices } from "../src/services.js";
-import { MockAgent } from "./helpers.js";
+import { MockAgent, withSession } from "./helpers.js";
 
 describe("crash handlers", () => {
   it("logs rejections and exceptions to the file and keeps going; exits on a burst", () => {
@@ -45,7 +45,7 @@ describe("default sandbox inbox and clean API errors", () => {
     const agent = new MockAgent(() => { throw new Error("agent exploded"); });
     const spy = vi.spyOn(console, "error").mockImplementation(() => undefined);
     const services = createServices({ config, db, mcp: { toolInfos: [] } as never, agent });
-    const app = buildApp({ config, db, mcp: undefined, services });
+    const app = withSession(buildApp({ config, db, mcp: undefined, services }), db);
     const res = await app.inject({ method: "POST", url: "/api/runs", payload: { goal: "do the things" } });
     expect(res.statusCode).toBe(200);
     await services.runtime!.whenIdle();

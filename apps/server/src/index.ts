@@ -1,5 +1,6 @@
 import { dirname, resolve } from "node:path";
 import { buildApp } from "./app.js";
+import { seedDemoUser } from "./auth.js";
 import { installCrashHandlers } from "./crash-log.js";
 import { loadConfig } from "./config.js";
 import { openDb } from "./db/index.js";
@@ -16,6 +17,9 @@ const ERROR_LOG = resolve(dirname(resolve(config.DATABASE_PATH)), "server-error.
 installCrashHandlers(ERROR_LOG);
 const { db } = openDb(config.DATABASE_PATH);
 ensureUser(db);
+if (!(await seedDemoUser(db, config.DEMO_USER_EMAIL, config.DEMO_USER_PASSWORD))) {
+  console.warn("DEMO_USER_EMAIL / DEMO_USER_PASSWORD are not set: nobody can sign in. Set them in .env and restart.");
+}
 // Saved per-user mode decides which backend the MCP servers start with.
 const mcp = new McpHub({ sandboxDir: config.SANDBOX_STORE_DIR });
 const google = new GoogleConnection(config, db, mcp, GoogleConnection.providerFor(config), () => busyReason(db));

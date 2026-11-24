@@ -22,7 +22,7 @@ Requires Node 20+. The whole app runs on **SANDBOX DATA** with no Google account
 2. `cp .env.example .env` (Windows: `copy .env.example .env`). The default is `LLM_PROVIDER=replay` (demo mode): scripted sample outputs, no API key, with a visible **DEMO MODE — scripted sample outputs, not live AI** banner. For live AI set `LLM_PROVIDER=gemini` + `LLM_MODEL` + `GEMINI_API_KEY` (or `anthropic` + `ANTHROPIC_API_KEY`). Optional: `LLM_FALLBACK_MODEL`.
 3. `npm run demo:reset`
 4. `npm run dev:server` (API on :8787) and, in a second terminal, `npm run dev:web` (UI on :5173)
-5. Open http://localhost:5173, press **Try sandbox**, then **Scan inbox**, then **Handle these**.
+5. Open http://localhost:5173, sign in with `DEMO_USER_EMAIL` / `DEMO_USER_PASSWORD` from your `.env` (the example file uses `demo@munshi.local` / `munshi-demo-2026`; change it), press **Try sandbox**, then **Scan inbox**, then **Handle these**.
 
 Checks: `npm run typecheck`, `npm test`, `npm run e2e`. More options are under [Setup](#setup-details).
 
@@ -163,6 +163,15 @@ non-allowlisted recipient is blocked; undo-only tools are never callable by the 
 
 ---
 
+## Security: authentication
+
+- **Single user, no registration, no password reset.** One login is seeded from `DEMO_USER_EMAIL` / `DEMO_USER_PASSWORD` at server start. To change the password, edit `.env` and restart; the stored hash is refreshed. Without both variables nobody can sign in.
+- Passwords are stored as salted `scrypt` hashes (`node:crypto`). Unknown email and wrong password give the same answer and take the same time.
+- `POST /api/auth/login` creates a random 256-bit session token. Only its SHA-256 is stored server-side. The browser gets it as an `httpOnly; SameSite=Strict` cookie that expires after 12 hours. `POST /api/auth/logout` deletes the session server-side. `GET /api/auth/me` reports who is signed in.
+- Login is rate limited to 5 attempts per minute per client address (then 429). Login, failed login and logout are written to the append-only audit log.
+- Every `/api` route needs a valid session (401 otherwise), except `/api/health` and login/logout. The Google OAuth redirect URL is exempt because it is protected by its own one-time CSRF nonce; starting the Google flow needs a session. The Origin and Host checks still apply on top.
+- Limits: no HTTPS or `Secure` cookie flag (the app is localhost-only; put it behind TLS before exposing it), no MFA, no account lockout beyond the rate limit, and the rate limiter is in memory (resets on restart).
+
 ## Threat model
 
 **What we defend: indirect prompt injection through email content.**
@@ -206,7 +215,7 @@ See `CLAUDE.md` for the detailed design notes.
 - Injection phrase detection is regex-based and only *flags*. Security rests on the vetting step and the Guard, not on catching every phrase.
 - Provenance is address-based. Body content, subjects and event titles are not taint-tracked (see threat model).
 - Hold-window sends are released by an in-process 1s scheduler. If the server is down at the deadline, the send happens late after restart (audited), never lost and never early.
-- Single local user, no login. The API is localhost-only with origin/host checks. The SQLite file is not encrypted (only OAuth tokens are).
+- Single local user with one env-seeded login (see Security: authentication). The API is localhost-only with origin/host checks and a session cookie. The SQLite file is not encrypted (only OAuth tokens are).
 - Google mode: last 14 days / max 30 emails, no attachments or pagination, calendar events created without invitation emails (`sendUpdates: none`).
 - The web app has typecheck and build checks but no UI tests.
 - Sandbox fixtures use reserved `.example` domains and fictional brands.

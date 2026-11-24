@@ -10,7 +10,7 @@ import { McpHub } from "../src/mcp/hub.js";
 import { listNudges } from "../src/nudges.js";
 import { scanInbox } from "../src/scan.js";
 import { ScanScheduler } from "../src/scheduler.js";
-import { MockLlm, obligationJson } from "./helpers.js";
+import { MockLlm, obligationJson, withSession } from "./helpers.js";
 
 let dir: string;
 let hub: McpHub;
@@ -100,10 +100,10 @@ describe("proactive scan scheduler", () => {
 
   it("GET /api/scheduler reports status (no scheduler is built in tests)", async () => {
     const { db } = openDb(":memory:");
-    const off = buildApp({ config: loadConfig({}), db, mcp: hub });
+    const off = withSession(buildApp({ config: loadConfig({}), db, mcp: hub }), db);
     expect((await off.inject({ method: "GET", url: "/api/scheduler" })).json()).toMatchObject({ enabled: false, running: false, lastRunAt: null });
     const sched = new ScanScheduler({ db, mcp: hub, llm: extractor(), intervalMin: 0 });
-    const on = buildApp({ config: loadConfig({ SCAN_INTERVAL_MIN: "0" }), db, mcp: hub, scheduler: sched });
+    const on = withSession(buildApp({ config: loadConfig({ SCAN_INTERVAL_MIN: "0" }), db, mcp: hub, scheduler: sched }), db);
     expect((await on.inject({ method: "GET", url: "/api/scheduler" })).json()).toMatchObject({ enabled: false });
   });
 });

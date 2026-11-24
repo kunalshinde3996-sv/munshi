@@ -8,6 +8,7 @@ import { buildApp } from "../src/app.js";
 import { loadConfig } from "../src/config.js";
 import { openDb } from "../src/db/index.js";
 import { McpHub, McpToolError } from "../src/mcp/hub.js";
+import { withSession } from "./helpers.js";
 
 let dir: string;
 let hub: McpHub;
@@ -135,7 +136,7 @@ describe("sandbox fixtures", () => {
 describe("debug route", () => {
   it("GET /api/debug/mcp/tools exposes tools + metadata", async () => {
     const { db } = openDb(":memory:");
-    const app = buildApp({ config: loadConfig({}), db, mcp: hub });
+    const app = withSession(buildApp({ config: loadConfig({}), db, mcp: hub }), db);
     const res = await app.inject({ method: "GET", url: "/api/debug/mcp/tools" });
     expect(res.statusCode).toBe(200);
     const body = res.json();

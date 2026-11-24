@@ -11,6 +11,7 @@ import { buildApp } from "../src/app.js";
 import { loadConfig } from "../src/config.js";
 import { openDb, schema } from "../src/db/index.js";
 import { McpHub } from "../src/mcp/hub.js";
+import { seedDemoUser } from "../src/auth.js";
 import { ensureUser } from "../src/scan.js";
 import { createServices } from "../src/services.js";
 import { MockAgent, MockLlm, obligationJson, obligationsFrom } from "../test/helpers.js";
@@ -23,6 +24,7 @@ export async function runE2E(log: (line: string) => void = () => undefined): Pro
   await hub.connect();
   const { db, sqlite } = openDb(":memory:");
   ensureUser(db);
+  await seedDemoUser(db, "e2e@munshi.local", "e2e-password-1");
 
   const clock = { now: Date.now() };
   // Scripted extractor: grounded answers for three legitimate emails, nothing for the rest (it "behaves" here;
@@ -58,14 +60,27 @@ export async function runE2E(log: (line: string) => void = () => undefined): Pro
 
   const services = createServices({ config: { SEND_HOLD_SECONDS: 60 }, db, mcp: hub, agent, clock: () => clock.now });
   const app = buildApp({ config: loadConfig({}), db, mcp: hub, llm: extractor, services });
-  const get = async (url: string) => (await app.inject({ method: "GET", url })).json();
-  const post = async (url: string, payload: unknown = {}) => app.inject({ method: "POST", url, payload: payload as object });
+  let cookie = "";
+  const get = async (url: string) => (await app.inject({ method: "GET", url, headers: { cookie } })).json();
+  const post = async (url: string, payload: unknown = {}) => app.inject({ method: "POST", url, payload: payload as object, headers: { cookie } });
   const step = async (name: string, fn: () => Promise<void>) => {
     await fn();
     log(`PASS  ${name}`);
   };
 
   try {
+    await step("auth: API refuses anonymous callers, then login issues an httpOnly session cookie", async () => {
+      assert.equal((await app.inject({ method: "GET", url: "/api/obligations" })).statusCode, 401);
+      assert.equal((await app.inject({ method: "POST", url: "/api/auth/login", payload: { email: "e2e@munshi.local", password: "wrong" } })).statusCode, 401);
+      const r = await app.inject({ method: "POST", url: "/api/auth/login", payload: { email: "e2e@munshi.local", password: "e2e-password-1" } });
+      assert.equal(r.statusCode, 200);
+      const set = String(r.headers["set-cookie"]);
+      assert.match(set, /HttpOnly/);
+      assert.match(set, /SameSite=Strict/);
+      cookie = set.split(";")[0]!;
+      assert.equal((await app.inject({ method: "GET", url: "/api/auth/me", headers: { cookie } })).statusCode, 200);
+    });
+
     let runId = "";
     let actions: any[] = [];
 
