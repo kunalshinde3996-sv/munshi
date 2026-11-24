@@ -2,6 +2,7 @@ import cors from "@fastify/cors";
 import Fastify from "fastify";
 import { z } from "zod";
 import type { Config } from "./config.js";
+import { makeOriginPolicy } from "./origin.js";
 import type { Db } from "./db/index.js";
 import { schema } from "./db/index.js";
 import { sanitizeEmailBody } from "./extraction/sanitize.js";
@@ -45,13 +46,17 @@ export function buildApp({ config, db, mcp, llm, llmError, services, google, sch
   const app = Fastify({ logger: process.env.NODE_ENV !== "test" });
   // Local single-user app: only the Munshi web UI may call the API from a browser. This blocks other websites
   // (CSRF, e.g. a page that POSTs /api/actions/:id/approve) and DNS-rebinding attempts.
-  const allowedOrigins = new Set([config.WEB_ORIGIN, `http://localhost:${config.PORT}`, `http://127.0.0.1:${config.PORT}`, "http://127.0.0.1:5173"]);
-  app.register(cors, { origin: [...allowedOrigins], credentials: true });
+  const origins = makeOriginPolicy({ webOrigin: config.WEB_ORIGIN, port: config.PORT, allowedOrigins: config.ALLOWED_ORIGINS, production: process.env.NODE_ENV === "production" });
+  app.register(cors, { origin: (o, cb) => cb(null, !o || origins.isAllowed(o)), credentials: true });
   app.addHook("onRequest", async (req, reply) => {
     const host = (req.headers.host ?? "").replace(/:\d+$/, "");
-    if (host && !["localhost", "127.0.0.1", "[::1]"].includes(host)) return reply.code(403).send({ error: "Forbidden host" });
+    if (host && !["localhost", "127.0.0.1", "[::1]"].includes(host)) {
+      console.warn(`[origin] rejected Host "${req.headers.host}" (allowed hosts: localhost, 127.0.0.1, [::1])`);
+      return reply.code(403).send({ error: "Forbidden host" });
+    }
     const origin = req.headers.origin;
-    if (req.method !== "GET" && req.method !== "OPTIONS" && origin && !allowedOrigins.has(origin)) {
+    if (req.method !== "GET" && req.method !== "OPTIONS" && origin && !origins.isAllowed(origin)) {
+      console.warn(`[origin] rejected Origin "${origin}" Host "${req.headers.host}" on ${req.method} ${req.url}; allowed origins: ${origins.describe()}`);
       return reply.code(403).send({ error: "Cross-origin request blocked" });
     }
   });

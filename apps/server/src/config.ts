@@ -32,6 +32,8 @@ const Env = z.object({
   GOOGLE_CLIENT_SECRET: z.string().optional(),
   GOOGLE_REDIRECT_URI: z.string().default("http://localhost:8787/auth/google/callback"),
   WEB_ORIGIN: z.string().default("http://localhost:5173"),
+  /** Extra allowed browser origins, comma-separated (localhost/127.0.0.1 on any port are always allowed outside production). */
+  ALLOWED_ORIGINS: z.string().optional(),
   /** Telegram channel (optional). Without a token the feature reports "Not configured". */
   TELEGRAM_BOT_TOKEN: z.string().optional(),
   TELEGRAM_CHAT_ID: z.string().optional(),
