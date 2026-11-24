@@ -130,6 +130,11 @@ Every tool declares: `riskTier`, `reversible`, `undoTool?`, `verifyTool?`, `sens
 - Only `POST /api/policies/compile/:draftId/confirm` (single-use, 15 min TTL, saves the exact stored rule) activates it. Audit events `policy_proposed` / `policy_confirmed`.
 - Invalid compile -> 422 with a clear message; the built-in Guard invariants are unaffected by any rule.
 
+## Proactive scheduler (Phase 2, C3) - scheduler.ts
+- `ScanScheduler` (index.ts only; never built in tests): every `SCAN_INTERVAL_MIN` minutes (default 30, 0 = off) runs `scanInbox` (same LLM pacing + extraction cache) then `syncNudges`.
+  It never starts an agent run and never executes or proposes an action, so R2 stays user-only. Overlapping passes are skipped; `scanInbox` calls on one DB are serialized.
+  Errors (incl. all-models-over-quota) are recorded and retried next interval. `GET /api/scheduler` shows status; the Inbox shows a status line.
+
 ## Seed policies
 Never auto-send email; block tainted send_email to non-allowlisted recipients;
 auto-allow calendar reminders for obligations with confidence >= 0.8.

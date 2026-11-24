@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import RunPanel from "./RunPanel";
 import { usePoll } from "../components";
-import { api, channelsApi, type Nudge, type EmailDetail, type EmailRow, type Health, type Obligation, type ScanSummary } from "../api";
+import { api, channelsApi, type Nudge, type SchedulerStatus, type EmailDetail, type EmailRow, type Health, type Obligation, type ScanSummary } from "../api";
 
 const TYPE_STYLE: Record<string, string> = {
   bill: "bg-rose-100 text-rose-800",
@@ -121,6 +121,8 @@ export default function Inbox({ health, onActionsChange, goToApprovals }: { heal
   const [error, setError] = useState<string | null>(null);
   const [open, setOpen] = useState<string | null>(null);
   const [nudges, setNudges] = useState<Nudge[]>([]);
+  const [sched, setSched] = useState<SchedulerStatus | null>(null);
+  usePoll(async () => setSched(await channelsApi.scheduler().catch(() => null)), 15000);
   usePoll(async () => setNudges(await channelsApi.nudges().catch(() => [])), 15000);
 
   const refresh = useCallback(async () => {
@@ -191,6 +193,14 @@ export default function Inbox({ health, onActionsChange, goToApprovals }: { heal
         </p>
       )}
 
+      {sched && (
+        <p className="text-xs text-stone-500" aria-label="Background scan status">
+          {sched.enabled
+            ? `Background scan every ${sched.intervalMin} min${sched.running ? " (running now)" : sched.lastRunAt ? `, last at ${new Date(sched.lastRunAt).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}` : ", first run pending"}. It only reads and creates nudges; it never acts for you.`
+            : "Background scan is off (set SCAN_INTERVAL_MIN in .env)."}
+          {sched.lastError && <span className="text-red-700"> Last scan failed: {sched.lastError}</span>}
+        </p>
+      )}
       {nudges.length > 0 && (
         <section className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950" aria-label="Due soon">
           <h2 className="mb-1 font-semibold">Due within 48 hours, not handled yet ({nudges.length})</h2>

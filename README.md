@@ -42,7 +42,7 @@ Checks: `npm run typecheck`, `npm test`, `npm run e2e`. More options are under [
 | Offline end-to-end scenario (`npm run e2e`) | Working (LLM calls are scripted mocks) |
 | Telegram approvals (inline Approve/Reject, tainted double-confirm) and due-date nudges | Working (needs your bot token; tested against a fake Bot API, not live) |
 | Plain-language policies (LLM drafts, deterministic readback, you confirm; LLM never activates a rule) | Working |
-| Proactive background scans | Planned |
+| Proactive background scans (read + nudge only, never acts) | Working |
 | Attack evaluation benchmark + Eval tab | Planned |
 | R3 actions (delete, pay) | Intentionally blocked in this prototype |
 

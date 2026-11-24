@@ -164,7 +164,9 @@ export const googleApi = {
 
 export type TelegramStatus = { configured: boolean; linked: boolean; polling: boolean; bot: string | null; lastError: string | null; setup: string[] };
 export type Nudge = { obligationId: string; title: string; type: string; dueDate: string | null; dueAt: number; amount: number | null; currency: string | null; counterparty: string | null };
+export type SchedulerStatus = { enabled: boolean; intervalMin: number; running: boolean; lastRunAt: number | null; lastError: string | null; newNudges: number; nextRunAt: number | null };
 export const channelsApi = {
+  scheduler: () => req<SchedulerStatus>("/api/scheduler"),
   telegram: () => req<TelegramStatus>("/api/telegram"),
   nudges: () => req<{ nudges: Nudge[] }>("/api/nudges").then((r) => r.nudges),
 };

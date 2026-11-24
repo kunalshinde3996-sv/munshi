@@ -11,6 +11,7 @@ import { registerAgentRoutes } from "./routes.js";
 import { registerGoogleRoutes } from "./routes-google.js";
 import type { GoogleConnection } from "./google/connection.js";
 import type { Services } from "./services.js";
+import type { ScanScheduler } from "./scheduler.js";
 import { currentMode, listEmails, listObligations, scanInbox } from "./scan.js";
 import { eq } from "drizzle-orm";
 import { audit } from "./audit.js";
@@ -26,6 +27,8 @@ export interface AppDeps {
   llmError?: string;
   services?: Services;
   google?: GoogleConnection;
+  /** Background scanner (absent in tests and when SCAN_INTERVAL_MIN=0). */
+  scheduler?: ScanScheduler;
 }
 
 /** Mode comes from the database (per-user setting), never hardcoded. Sandbox data is always labelled. */
@@ -34,7 +37,7 @@ const modeInfo = (db: Db) => {
   return { mode, label: mode === "sandbox" ? "SANDBOX DATA" : null } as const;
 };
 
-export function buildApp({ config, db, mcp, llm, llmError, services, google }: AppDeps) {
+export function buildApp({ config, db, mcp, llm, llmError, services, google, scheduler }: AppDeps) {
   const app = Fastify({ logger: process.env.NODE_ENV !== "test" });
   // Local single-user app: only the Munshi web UI may call the API from a browser. This blocks other websites
   // (CSRF, e.g. a page that POSTs /api/actions/:id/approve) and DNS-rebinding attempts.
@@ -85,6 +88,10 @@ export function buildApp({ config, db, mcp, llm, llmError, services, google }: A
       throw e;
     }
   });
+
+  app.get("/api/scheduler", async () =>
+    scheduler?.status() ?? { enabled: false, intervalMin: config.SCAN_INTERVAL_MIN, running: false, lastRunAt: null, lastSummary: null, lastError: null, newNudges: 0, nextRunAt: null },
+  );
 
   app.get("/api/obligations", async () => ({ ...modeInfo(db), obligations: listObligations(db) }));
 
@@ -146,6 +153,7 @@ export function buildApp({ config, db, mcp, llm, llmError, services, google }: A
   registerGoogleRoutes(app, config, google);
 
   if (services) app.addHook("onClose", async () => { services.executor.stopScheduler(); await services.telegram?.stop(); await services.runtime?.whenIdle(); });
+  if (scheduler) app.addHook("onClose", async () => scheduler.stop());
   if (mcp) app.addHook("onClose", async () => mcp.close());
   return app;
 }

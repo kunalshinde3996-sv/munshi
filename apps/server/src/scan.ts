@@ -50,8 +50,18 @@ export interface ScanOptions {
   onProgress?: (msg: string) => void;
 }
 
+const scanChains = new WeakMap<Db, Promise<unknown>>();
+
+/** Scans on the same database are serialized, so a scheduled scan and a manual one never run (or extract) concurrently. */
+export function scanInbox(opts: ScanOptions): Promise<ScanSummary> {
+  const prev = scanChains.get(opts.db) ?? Promise.resolve();
+  const run = prev.catch(() => undefined).then(() => scanInboxNow(opts));
+  scanChains.set(opts.db, run.catch(() => undefined));
+  return run;
+}
+
 /** List inbox via MCP → quarantined extraction per email → persist obligations, flags and failures. */
-export async function scanInbox({ db, mcp, llm, force = false, now = new Date(), onProgress }: ScanOptions): Promise<ScanSummary> {
+async function scanInboxNow({ db, mcp, llm, force = false, now = new Date(), onProgress }: ScanOptions): Promise<ScanSummary> {
   ensureUser(db);
   const listed = await mcp.callTool("list_recent_emails", { limit: 50 });
   const source = listed.source as "sandbox" | "google";

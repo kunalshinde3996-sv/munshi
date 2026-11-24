@@ -6,6 +6,7 @@ import { createServices } from "./services.js";
 import { busyReason, GoogleConnection } from "./google/connection.js";
 import { McpHub } from "./mcp/hub.js";
 import { ensureUser } from "./scan.js";
+import { ScanScheduler } from "./scheduler.js";
 
 const config = loadConfig();
 const { db } = openDb(config.DATABASE_PATH);
@@ -21,8 +22,12 @@ const services = createServices({ config, db, mcp, ...("agent" in madeAgent ? { 
 services.executor.startScheduler();
 services.runtime?.recover();
 services.telegram?.start();
+const scheduler = "llm" in made && process.env.NODE_ENV !== "test"
+  ? new ScanScheduler({ db, mcp, llm: made.llm, intervalMin: config.SCAN_INTERVAL_MIN, log: (m) => console.log(m) })
+  : undefined;
+scheduler?.start();
 const app = buildApp({
-  config, db, mcp, services, google,
+  config, db, mcp, services, google, scheduler,
   ...("llm" in made ? { llm: made.llm } : { llmError: made.error }),
 });
 
