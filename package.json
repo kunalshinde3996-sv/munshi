@@ -19,6 +19,8 @@
     "extract:live": "npm run extract:live -w @munshi/server",
     "demo:reset": "npm run demo:reset -w @munshi/server",
     "e2e": "npm run e2e -w @munshi/server",
-    "eval:attacks": "npm run eval:attacks -w @munshi/server --"
+    "eval:attacks": "npm run eval:attacks -w @munshi/server --",
+    "agent:live": "npm run agent:live -w @munshi/server",
+    "check:sqlite": "node scripts/check-sqlite.mjs"
   }
 }

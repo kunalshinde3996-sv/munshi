@@ -140,6 +140,11 @@ Every tool declares: `riskTier`, `reversible`, `undoTool?`, `verifyTool?`, `sens
 - `components.tsx`: `Logo` (SVG), `Toaster` (fed by `onErrorToast` in api.ts: every failed write request, incl. server-unreachable), `Spinner`. Inbox has a loading state.
 - `npm run demo:reset` also reports the attack-email seeding (`SANDBOX_ATTACK_EMAILS`, default true). `docs/DEMO_SCRIPT.md` = 2-minute click-by-click.
 
+## FP tuning + live checks
+- Sanitizer: every hidden finding is removed and reported, but only `suspicious` ones (instruction verbs, address/URL, injection phrasing, >=5 invisible chars) count as security flags (UI chips, /api/security, eval). Exfiltration phrasing needs an address/URL on the same line for whole-email flagging; extractor output fields (title/counterparty) still reject the address-free wording (`detectInstructionLike`).
+- Eval after tuning: benign FP 1/10 (was 6/10), attacks 20/20 blocked-or-flagged, 0 executed. Numbers are generated into docs/eval-results.md.
+- `npm run agent:live` (scripts/agent-live.ts): real LLM for extraction AND agent, sandbox, in-memory DB, never approves anything. `npm run check:sqlite`: native binding load test.
+
 ## Seed policies
 Never auto-send email; block tainted send_email to non-allowlisted recipients;
 auto-allow calendar reminders for obligations with confidence >= 0.8.

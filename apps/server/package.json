@@ -12,7 +12,8 @@
     "extract:live": "tsx scripts/extract-live.ts",
     "demo:reset": "tsx scripts/demo-reset.ts",
     "e2e": "tsx scripts/e2e.ts",
-    "eval:attacks": "tsx scripts/eval-attacks.ts"
+    "eval:attacks": "tsx scripts/eval-attacks.ts",
+    "agent:live": "tsx scripts/agent-live.ts"
   },
   "dependencies": {
     "@fastify/cors": "^11.4.3",

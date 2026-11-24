@@ -81,7 +81,15 @@ Requires Node 20+ (developed on Node 24, Windows 11).
 7. *(optional)* `npm run extract:live` runs your real LLM over all 15 sandbox emails and prints the obligations as a table.
 8. *(optional, Google mode)* set `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `TOKEN_ENCRYPTION_KEY`. Register exactly this redirect URI in Google Cloud: `http://localhost:8787/auth/google/callback`. The "Connect Google" button shows the full steps if anything is missing.
 
-Checks: `npm run typecheck`, `npm test`, `npm run e2e` (offline end-to-end scenario).
+Checks: `npm run typecheck`, `npm test`, `npm run e2e` (offline end-to-end scenario). `npm run check:sqlite` confirms the native SQLite binding loads. `npm run agent:live` runs the real LLM for extraction and agent tool-calling on sandbox data and prints every proposed call with the Guard's decision.
+
+### If better-sqlite3 fails to load
+
+`better-sqlite3` ships prebuilt binaries for Windows, macOS and Linux (x64/arm64, glibc and musl), and the project `.npmrc` sets `ignore-scripts=true` so `npm install` never tries to compile it. Verified on a fresh clone (Node 24, Windows x64). If `npm run check:sqlite` fails, for example on an unusual platform or an older Node:
+
+1. Use Node 20+ (`node -v`), then delete `node_modules` and run `npm install` again.
+2. Build from source: macOS `xcode-select --install`; Debian/Ubuntu `sudo apt install build-essential python3`; Windows install Visual Studio Build Tools with "Desktop development with C++". Then run `npm rebuild better-sqlite3 --ignore-scripts=false` (or `cd node_modules/better-sqlite3 && npx node-gyp rebuild`).
+3. Still failing: open an issue with the output of `npm run check:sqlite` and `node -v`.
 
 Without any LLM key the app still runs. Scanning and "Handle these" are disabled with the reason shown, and sandbox data, policies, the Security view and the Guard all work.
 
