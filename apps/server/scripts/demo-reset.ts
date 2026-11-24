@@ -28,4 +28,5 @@ sqlite.close();
 console.log("Demo state reset:");
 console.log(`  database       ${dbPath}  (fresh schema, sandbox mode, default policies)`);
 console.log(`  SANDBOX DATA   ${sandbox}  (mailbox/calendar will be re-seeded on first use, dates relative to today)`);
+console.log(config.SANDBOX_ATTACK_EMAILS ? "  attack emails  20 injection + 10 benign look-alike emails will be seeded (SANDBOX DATA)" : "  attack emails  disabled (SANDBOX_ATTACK_EMAILS=false)");
 console.log("Next: npm run dev:server  &&  npm run dev:web");

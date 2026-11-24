@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import type { Action } from "./api";
+import { onErrorToast, type Action } from "./api";
 
 export function usePoll(fn: () => Promise<void> | void, ms: number, deps: unknown[] = []) {
   const ref = useRef(fn);
@@ -81,3 +81,47 @@ export function Banner({ tone, children }: { tone: "red" | "amber" | "green"; ch
 }
 
 export const fmtTime = (ts: number) => new Date(ts).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+
+/** Brand mark: ledger "M" in paper on ink with a saffron rule and seal dot. Pure SVG. */
+export function Logo({ size = 32 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 32 32" role="img" aria-label="Munshi logo">
+      <rect width="32" height="32" rx="8" fill="#1c2434" />
+      <path d="M8 23h16" stroke="#d9770a" strokeWidth="2.4" strokeLinecap="round" />
+      <path d="M9 20V12l7 6 7-6v8" fill="none" stroke="#faf8f4" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
+      <circle cx="16" cy="7.5" r="1.8" fill="#d9770a" />
+    </svg>
+  );
+}
+
+/** Error toasts for failed write requests. Auto-dismiss after 6s; also dismissable. */
+export function Toaster() {
+  const [items, setItems] = useState<{ id: number; text: string }[]>([]);
+  useEffect(() => {
+    let n = 0;
+    return onErrorToast((text) => {
+      const id = ++n;
+      setItems((x) => [...x.slice(-3), { id, text }]);
+      setTimeout(() => setItems((x) => x.filter((i) => i.id !== id)), 6000);
+    });
+  }, []);
+  return (
+    <div className="fixed bottom-4 right-4 z-50 flex w-[calc(100%-2rem)] max-w-sm flex-col gap-2" aria-live="assertive">
+      {items.map((i) => (
+        <div key={i.id} role="alert" className="flex items-start justify-between gap-3 rounded-lg border border-red-300 bg-white p-3 text-sm text-red-800 shadow-lg">
+          <span>{i.text}</span>
+          <button onClick={() => setItems((x) => x.filter((y) => y.id !== i.id))} className="text-stone-400 hover:text-ink" aria-label="Dismiss">✕</button>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+export function Spinner({ label = "Loading…" }: { label?: string }) {
+  return (
+    <p className="flex items-center gap-2 p-6 text-sm text-stone-500" role="status">
+      <span className="h-4 w-4 animate-spin rounded-full border-2 border-stone-300 border-t-saffron" />
+      {label}
+    </p>
+  );
+}

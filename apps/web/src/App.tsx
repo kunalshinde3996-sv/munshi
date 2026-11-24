@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { api, api2, type Action, type Health } from "./api";
-import { Banner, usePoll } from "./components";
+import { Banner, Logo, Toaster, usePoll } from "./components";
+import Onboarding from "./Onboarding";
 import ModeControl, { ModeBadge } from "./ModeControl";
 import Activity from "./pages/Activity";
 import Approvals from "./pages/Approvals";
@@ -43,12 +44,27 @@ export default function App() {
     window.history.replaceState({}, "", window.location.pathname);
   }, []);
 
+  const [welcomed, setWelcomed] = useState(() => localStorage.getItem("munshi.onboarded") === "1");
+  if (!welcomed) {
+    return (
+      <>
+        <Onboarding
+          health={health}
+          offline={offline}
+          onStart={() => { localStorage.setItem("munshi.onboarded", "1"); setWelcomed(true); void loadHealth(); }}
+        />
+        <Toaster />
+      </>
+    );
+  }
+
   return (
     <div className="min-h-screen">
+      <Toaster />
       <header className="border-b border-stone-200 bg-white">
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-4 py-3">
           <div className="flex items-center gap-2">
-            <span className="grid h-8 w-8 place-items-center rounded-lg bg-ink text-lg font-bold text-saffron">म</span>
+            <Logo />
             <span className="text-lg font-semibold tracking-tight">Munshi</span>
           </div>
           <div className="flex flex-wrap items-center justify-end gap-3">
@@ -63,12 +79,12 @@ export default function App() {
             </span>
           </div>
         </div>
-        <nav className="mx-auto flex max-w-5xl gap-1 px-4">
+        <nav className="mx-auto flex max-w-5xl gap-1 overflow-x-auto px-4" aria-label="Sections">
           {TABS.map((t) => (
             <button
               key={t.id}
               onClick={() => setPage(t.id)}
-              className={`border-b-2 px-3 py-2 text-sm font-medium ${
+              className={`shrink-0 border-b-2 px-3 py-2 text-sm font-medium ${
                 page === t.id ? "border-saffron text-ink" : "border-transparent text-stone-500 hover:text-ink"
               }`}
             >

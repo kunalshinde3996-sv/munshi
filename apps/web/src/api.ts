@@ -66,10 +66,30 @@ export type ScanSummary = {
   injectionEmails: number;
 };
 
+type ToastListener = (text: string) => void;
+const toastListeners = new Set<ToastListener>();
+/** Subscribe to error toasts raised by failed write requests (see Toaster in components.tsx). */
+export const onErrorToast = (fn: ToastListener) => {
+  toastListeners.add(fn);
+  return () => void toastListeners.delete(fn);
+};
+
 async function req<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(path, init);
+  const isWrite = (init?.method ?? "GET").toUpperCase() !== "GET";
+  let res: Response;
+  try {
+    res = await fetch(path, init);
+  } catch {
+    const e = new Error("Cannot reach the Munshi server. Is `npm run dev:server` running?");
+    if (isWrite) toastListeners.forEach((f) => f(e.message));
+    throw e;
+  }
   const body = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error((body as { error?: string }).error ?? `HTTP ${res.status}`);
+  if (!res.ok) {
+    const msg = (body as { error?: string }).error ?? `HTTP ${res.status}`;
+    if (isWrite) toastListeners.forEach((f) => f(msg));
+    throw new Error(msg);
+  }
   return body as T;
 }
 

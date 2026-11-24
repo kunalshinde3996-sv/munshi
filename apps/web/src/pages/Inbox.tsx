@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import RunPanel from "./RunPanel";
-import { usePoll } from "../components";
+import { Spinner, usePoll } from "../components";
 import { api, channelsApi, type Nudge, type SchedulerStatus, type EmailDetail, type EmailRow, type Health, type Obligation, type ScanSummary } from "../api";
 
 const TYPE_STYLE: Record<string, string> = {
@@ -116,6 +116,7 @@ function FlagList({ flags }: { flags: EmailDetail["flags"] }) {
 export default function Inbox({ health, onActionsChange, goToApprovals }: { health: Health | null; onActionsChange: () => void; goToApprovals: () => void }) {
   const [obligations, setObligations] = useState<Obligation[]>([]);
   const [emails, setEmails] = useState<EmailRow[]>([]);
+  const [loaded, setLoaded] = useState(false);
   const [scanning, setScanning] = useState(false);
   const [summary, setSummary] = useState<ScanSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -132,7 +133,7 @@ export default function Inbox({ health, onActionsChange, goToApprovals }: { heal
   }, []);
 
   useEffect(() => {
-    refresh().catch((e: Error) => setError(e.message));
+    refresh().catch((e: Error) => setError(e.message)).finally(() => setLoaded(true));
   }, [refresh]);
 
   const scan = async (force: boolean) => {
@@ -232,7 +233,9 @@ export default function Inbox({ health, onActionsChange, goToApprovals }: { heal
 
       <section>
         <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-stone-500">Obligations ({obligations.length})</h2>
-        {obligations.length === 0 ? (
+        {!loaded ? (
+          <Spinner label="Loading obligations…" />
+        ) : obligations.length === 0 ? (
           <p className="rounded-xl border border-dashed border-stone-300 p-8 text-center text-sm text-stone-500">
             {emails.length === 0 ? "No scan yet. Press “Scan inbox” to extract obligations." : "No obligations found."}
           </p>

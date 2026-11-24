@@ -135,6 +135,11 @@ Every tool declares: `riskTier`, `reversible`, `undoTool?`, `verifyTool?`, `sens
   It never starts an agent run and never executes or proposes an action, so R2 stays user-only. Overlapping passes are skipped; `scanInbox` calls on one DB are serialized.
   Errors (incl. all-models-over-quota) are recorded and retried next interval. `GET /api/scheduler` shows status; the Inbox shows a status line.
 
+## Demo polish (Phase 2, D) - apps/web
+- `Onboarding.tsx`: first-run screen (3 points + "Try sandbox", switches mode to sandbox if needed); flag in localStorage `munshi.onboarded`.
+- `components.tsx`: `Logo` (SVG), `Toaster` (fed by `onErrorToast` in api.ts: every failed write request, incl. server-unreachable), `Spinner`. Inbox has a loading state.
+- `npm run demo:reset` also reports the attack-email seeding (`SANDBOX_ATTACK_EMAILS`, default true). `docs/DEMO_SCRIPT.md` = 2-minute click-by-click.
+
 ## Seed policies
 Never auto-send email; block tainted send_email to non-allowlisted recipients;
 auto-allow calendar reminders for obligations with confidence >= 0.8.
