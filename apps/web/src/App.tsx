@@ -3,15 +3,18 @@ import { api, api2, authApi, onUnauthorized, type Action, type AuthUser, type He
 import { Banner, DataBadge, Logo, ReplayBanner, Spinner, Toaster, usePoll } from "./components";
 import Login from "./Login";
 import Onboarding from "./Onboarding";
+import AuditLog from "./pages/AuditLog";
 import Settings from "./pages/Settings";
 import Today from "./pages/Today";
 import Trust from "./pages/Trust";
 import { useRun } from "./useRun";
 
-type Page = "today" | "trust" | "settings";
-const NAV: { id: Page; label: string }[] = [
+type Page = "today" | "trust" | "audit" | "settings";
+/** Array order is the visual order and the keyboard focus order. */
+export const NAV: { id: Page; label: string }[] = [
   { id: "today", label: "Today" },
   { id: "trust", label: "Trust" },
+  { id: "audit", label: "Audit log" },
   { id: "settings", label: "Settings" },
 ];
 
@@ -81,14 +84,14 @@ function Shell({ user, onLoggedOut }: { user: AuthUser; onLoggedOut: () => void 
           <span className="font-display text-lg font-semibold">Munshi</span>
           <DataBadge mode={health?.mode} />
         </div>
-        <nav className="flex gap-1" aria-label="Main">
+        <nav className="flex w-full justify-between gap-1 sm:w-auto sm:justify-start" aria-label="Main">
           {NAV.map((t) => (
             <button
               key={t.id}
               onClick={() => setPage(t.id)}
               aria-current={page === t.id ? "page" : undefined}
               aria-label={t.id === "today" && pending > 0 && page !== "today" ? `Today, ${pending} waiting for you` : undefined}
-              className={`relative rounded-full px-4 py-2 text-sm font-semibold ${page === t.id ? "bg-white text-ink shadow-sm" : "text-soft hover:text-ink"}`}
+              className={`relative whitespace-nowrap rounded-full px-3 py-2 text-sm font-semibold sm:px-4 ${page === t.id ? "bg-white text-ink shadow-sm" : "text-soft hover:text-ink"}`}
             >
               {t.label}
               {t.id === "today" && pending > 0 && page !== "today" && <span aria-hidden className="absolute right-1 top-1.5 h-2 w-2 rounded-full bg-warn" />}
@@ -110,6 +113,7 @@ function Shell({ user, onLoggedOut }: { user: AuthUser; onLoggedOut: () => void 
           <Today health={health} actions={actions} refreshActions={refresh} run={run} snoozed={snoozed} setSnoozed={setSnoozed} goToTrust={() => setPage("trust")} />
         )}
         {page === "trust" && <Trust actions={actions ?? []} mode={health?.mode} refresh={refresh} onEditRules={() => setPage("settings")} />}
+        {page === "audit" && <AuditLog actions={actions ?? []} />}
         {page === "settings" && <Settings health={health} offline={offline} email={user.email} onModeChange={() => void loadHealth()} onLogout={logout} />}
       </main>
     </div>

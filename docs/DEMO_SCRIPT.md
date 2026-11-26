@@ -20,8 +20,9 @@ All data is **SANDBOX DATA** (a fictional mailbox, dates relative to today). No 
 | 1:10 | Tick **I checked this address**, press **Approve**. On the other card press **Approve** | "Anything doubtful needs my yes. Executed, then read back to verify." |
 | 1:20 | Open **Handled**, press **Undo** on one reminder | "Everything else stayed out of my way, and it is undoable." |
 | 1:30 | Press the shield chip **2 suspicious emails blocked** | "That opens Trust. Two emails tried to give the assistant orders." |
-| 1:40 | In **Security**, on "This week's best deals" press **Show what it tried**, then **Show** on the audit log | "This one hid an instruction in invisible text. The sanitiser stripped it and flagged it. Every step is in an append-only log, in plain words, with the raw record underneath." |
-| 1:50 | Trust, **Eval** | "20 injection emails plus 10 benign look-alikes against a worst-case compromised agent: 20 of 20 blocked or flagged, 0 attacker actions executed without the user." |
+| 1:40 | In **Security**, on "This week's best deals" press **Show what it tried** | "This one hid an instruction in invisible text. The sanitiser stripped it and flagged it." |
+| 1:45 | Top navigation, **Audit log**; open **Raw** on one row | "Every step is here in plain words, newest first, with the raw record underneath. It is append-only: the database refuses edits and deletes." |
+| 1:50 | **Trust**, then **Eval** | "20 injection emails plus 10 benign look-alikes against a worst-case compromised agent: 20 of 20 blocked or flagged, 0 attacker actions executed without the user." |
 | 2:00 | Done | "Less magic, more utility: the model proposes, code decides." |
 
 If judges ask for more: **Details** on any card in Trust shows the rule id, tool, tier and exact arguments. **Trust, Activity** has the run step by step, and **Trust, Policies** lists the rules with their ids. Rules are edited in **Settings** (plain-language drafting needs a live LLM).

@@ -22,7 +22,11 @@ All captured in demo mode on SANDBOX DATA.
 
 ![Trust: security view](docs/screenshots/08-trust-security.png)
 
-*Trust: each suspicious email and flagged action in a few lines. "Show what it tried", "Details" and the collapsed audit log hold the full record: rule ids, provenance and raw entries.*
+*Trust: each suspicious email and flagged action in a few lines. "Show what it tried" and "Details" hold the full record: rule ids, tool, provenance and source email.*
+
+![Audit log page](docs/screenshots/11-audit-log.png)
+
+*Audit log: every step as one plain sentence, newest first, with the raw record behind "Raw". Append-only, enforced by the database.*
 
 ![Trust: attack evaluation](docs/screenshots/10-trust-eval.png)
 
@@ -127,7 +131,7 @@ Reproduce it with `npm run dev`; the click-by-click script is [docs/DEMO_SCRIPT.
 
 ![Handled with Undo](docs/screenshots/07-today-handled.png)
 
-**08. Trust, Security.** Suspicious emails show subject, sender and labels, plus one line of the injected text until you press "Show what it tried". Each blocked or tainted action shows a title, one short warning and how it ended; "Details" holds the rule, tool and tier, the provenance text and a link to the source email. The append-only audit log is collapsed; opened, it reads as one plain sentence per entry with the raw JSON behind each. The two injection emails produced no obligations, and the newsletter's hidden `display:none` text was stripped before extraction.
+**08. Trust, Security.** Suspicious emails show subject, sender and labels, plus one line of the injected text until you press "Show what it tried". Each blocked or tainted action shows a title, one short warning and how it ended; "Details" holds the rule, tool and tier, the provenance text and a link to the source email. The two injection emails produced no obligations, and the newsletter's hidden `display:none` text was stripped before extraction.
 
 ![Trust: security](docs/screenshots/08-trust-security.png)
 
@@ -139,13 +143,17 @@ Reproduce it with `npm run dev`; the click-by-click script is [docs/DEMO_SCRIPT.
 
 ![Trust: evaluation](docs/screenshots/10-trust-eval.png)
 
-**11. Settings.** Mailbox and Google connection, editable rules with plain-language drafting and a code-generated read-back, the contacts allowlist and Telegram.
+**11. Audit log.** Its own page in the main navigation. Every step Munshi took, one plain sentence per entry, newest first, with the raw JSON behind a collapsed "Raw". The log is append-only, enforced by the database. The page shows up to the latest 500 entries and says so when it reaches that limit.
 
-![Settings](docs/screenshots/11-settings.png)
+![Audit log page](docs/screenshots/11-audit-log.png)
 
-**12. On a phone.** The same brief at 375 px wide.
+**12. Settings.** Mailbox and Google connection, editable rules with plain-language drafting and a code-generated read-back, the contacts allowlist and Telegram.
 
-<img src="docs/screenshots/12-today-mobile.png" alt="Today on a narrow screen" width="300">
+![Settings](docs/screenshots/12-settings.png)
+
+**13. On a phone.** The same brief at 375 px wide.
+
+<img src="docs/screenshots/13-today-mobile.png" alt="Today on a narrow screen" width="300">
 
 ---
 
@@ -188,7 +196,7 @@ flowchart TD
 
 Components and where they live:
 
-- **Web UI** (`apps/web/src`): Vite + React + Tailwind. `App.tsx` is the auth gate; The main screens are Today, Trust and Settings (`pages/`); `plain.ts` turns API data into the short sentences on Today, and `drawers.tsx` holds the details behind them.
+- **Web UI** (`apps/web/src`): Vite + React + Tailwind. `App.tsx` is the auth gate; The main screens are Today, Trust, Audit log and Settings (`pages/`); `plain.ts` turns API data into the short sentences on Today, and `drawers.tsx` holds the details behind them.
 - **API** (`apps/server/src/app.ts`, `routes.ts`, `routes-google.ts`): Fastify. Session auth, Origin/Host checks, JSON errors, the endpoints the UI calls.
 - **Sanitizer and extractor** (`apps/server/src/extraction/`): `sanitize.ts` strips hidden content and flags injection phrasing (flag-only; security never relies on it), `extractor.ts` runs the tool-less LLM call and the vetting step, `obligation.ts` holds the schema.
 - **Agent runtime** (`apps/server/src/agent/runtime.ts`): the tool-calling loop (max 8 steps). Calls awaiting approval pause the run, which resumes when the user decides. `executor.ts` executes, undoes and runs the hold window; `verify.ts` reads results back.
@@ -402,7 +410,7 @@ Open http://localhost:5173, sign in (`demo@munshi.local` / `munshi-demo-2026`, o
 | `npm run check:sqlite` | Verifies the native SQLite binding loads |
 | `npm run db:generate` | Generate a Drizzle migration from `apps/server/src/db/schema.ts` |
 | `npm run check:readme` | Verifies that the paths, scripts, env vars, tool names and links the README mentions exist |
-| `npm run screenshots` | demo:reset, start servers, sign in, capture the 12 README screenshots, stop servers |
+| `npm run screenshots` | demo:reset, start servers, sign in, capture the 13 README screenshots, stop servers |
 
 ---
 
@@ -425,7 +433,7 @@ Open http://localhost:5173, sign in (`demo@munshi.local` / `munshi-demo-2026`, o
 │   │   ├── drizzle/            SQL migrations (incl. audit-log triggers)
 │   │   ├── scripts/            demo-reset, e2e, eval-attacks, extract-live, agent-live
 │   │   └── test/               Vitest suites
-│   └── web/                    React UI (pages/: Today, Trust, Settings)
+│   └── web/                    React UI (pages/: Today, Trust, AuditLog, Settings)
 ├── packages/
 │   ├── mcp-common/             tool metadata registry, arg schemas, sandbox helpers
 │   ├── mcp-gmail/              Gmail MCP server (sandbox + Google backends)
@@ -443,7 +451,7 @@ Open http://localhost:5173, sign in (`demo@munshi.local` / `munshi-demo-2026`, o
 
 ## Testing
 
-162 Vitest tests in `apps/server/test/` and 24 in `apps/web/src/`, all passing at the time of writing, plus an 8-step offline e2e scenario.
+162 Vitest tests in `apps/server/test/` and 28 in `apps/web/src/`, all passing at the time of writing, plus an 8-step offline e2e scenario.
 
 | Area | Tests | What is covered |
 |---|---|---|
@@ -459,7 +467,7 @@ Open http://localhost:5173, sign in (`demo@munshi.local` / `munshi-demo-2026`, o
 | Demo mode, resilience, health, eval | 11 | replay provider, crash handlers, error JSON, eval harness |
 | Origin policy | 4 | allowed browser origins and Host checks |
 | Web plain-language layer | 12 | approval sentences name every recipient, address warnings, home summary, dates and amounts |
-| Web Trust view | 12 | one reason stated once, collapsed details and audit log, final status, audit sentences |
+| Web Trust and Audit log | 16 | one reason stated once, collapsed details, final status, audit sentences and page, navigation order |
 | End to end | 1 (8 steps) | scan, handle, approve, verify, undo, injection blocked, hold-window cancel, audit |
 
 ```bash

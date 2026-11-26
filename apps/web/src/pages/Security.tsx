@@ -1,10 +1,7 @@
 import { useState } from "react";
-import { api, api2, type Action, type AuditEntry, type EmailRow, type SecurityAction, type SecurityEmail } from "../api";
+import { api, api2, type EmailRow, type SecurityAction, type SecurityEmail } from "../api";
 import { ActionCard } from "../ActionRecord";
 import { Chip, fmtTime, usePoll, useNow } from "../components";
-import { auditRefs, auditSentence, plural } from "../plain";
-
-const AUDIT_LIMIT = 500; // the API's maximum
 
 export function SuspiciousEmail({ e, nothingTaken, onOpen }: { e: SecurityEmail; nothingTaken: boolean; onOpen: () => void }) {
   const [expanded, setExpanded] = useState(false);
@@ -36,47 +33,16 @@ export function SuspiciousEmail({ e, nothingTaken, onOpen }: { e: SecurityEmail;
   );
 }
 
-/** Collapsed until asked for. One plain sentence per entry, with the raw record one tap further. */
-export function AuditLog({ entries, actions, emails }: { entries: AuditEntry[]; actions: Action[]; emails: EmailRow[] }) {
-  const [open, setOpen] = useState(false);
-  const refs = auditRefs(entries, actions);
-  const count = entries.length >= AUDIT_LIMIT ? `latest ${AUDIT_LIMIT} entries` : plural(entries.length, "entry", "entries");
-  return (
-    <section className="space-y-2" aria-label="Audit log">
-      <button onClick={() => setOpen(!open)} aria-expanded={open} className="panel flex w-full flex-wrap items-center justify-between gap-2 p-4 text-left">
-        <span className="font-display text-lg font-semibold">Audit log · {count}</span>
-        <span className="text-sm font-semibold text-accent">{open ? "Hide" : "Show"}</span>
-      </button>
-      <p className="text-sm text-soft">Append-only, enforced by the database.</p>
-      {open && (
-        <ol className="panel reveal divide-y divide-line">
-          {entries.map((e) => (
-            <li key={e.id} className="space-y-1 p-3 text-sm">
-              <p className="break-words"><span className="mr-2 text-xs tabular-nums text-soft">{fmtTime(e.ts)}</span>{auditSentence(e, refs, emails)}</p>
-              <details>
-                <summary className="w-fit text-xs text-soft" aria-label={`Raw record ${e.id}`}>Raw</summary>
-                <pre className="reveal mt-1 whitespace-pre-wrap break-all rounded-xl bg-mist p-2 text-xs">{JSON.stringify(e, null, 2)}</pre>
-              </details>
-            </li>
-          ))}
-        </ol>
-      )}
-    </section>
-  );
-}
-
-export default function Security({ actions: allActions, onOpenEmail }: { actions: Action[]; onOpenEmail: (id: string) => void }) {
+export default function Security({ onOpenEmail }: { onOpenEmail: (id: string) => void }) {
   const [flagged, setFlagged] = useState<SecurityAction[]>([]);
   const [emails, setEmails] = useState<SecurityEmail[]>([]);
   const [mail, setMail] = useState<EmailRow[]>([]);
-  const [audit, setAudit] = useState<AuditEntry[] | null>(null);
   const now = useNow();
   usePoll(async () => {
     const s = await api2.security();
     setFlagged(s.actions);
     setEmails(s.emails);
     setMail(await api.emails());
-    setAudit(await api2.audit(AUDIT_LIMIT));
   }, 3000);
   const quiet = mail.filter((e) => e.status === "done" && e.obligationCount === 0 && !emails.some((s) => s.id === e.id));
 
@@ -110,8 +76,6 @@ export default function Security({ actions: allActions, onOpenEmail }: { actions
           </ul>
         </details>
       )}
-
-      {audit && <AuditLog entries={audit} actions={allActions} emails={mail} />}
     </div>
   );
 }

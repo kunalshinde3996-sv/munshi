@@ -122,13 +122,24 @@ try {
   await handled.evaluate((el) => { el.scrollIntoView({ block: "start" }); window.scrollBy(0, -40); });
   await snap("07-today-handled");
 
-  // 12 the same brief on a 375px phone (captured now, while approvals are pending)
+  // 13 the same brief on a 375px phone (captured now, while approvals are pending)
   await page.setViewportSize({ width: 375, height: 812 });
   await handled.locator("summary").click();
   await top();
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
   if (overflow > 0) throw new Error(`Today overflows a 375px screen by ${overflow}px`);
-  await snap("12-today-mobile");
+  // the four main nav items fit on one row, inside the screen, and Tab walks them in order
+  const mainNav = page.getByRole("navigation", { name: "Main" }).getByRole("button");
+  const boxes = await Promise.all((await mainNav.all()).map((b) => b.boundingBox()));
+  if (boxes.length !== 4 || new Set(boxes.map((b) => Math.round(b.y))).size !== 1 || boxes.some((b) => b.x < 0 || b.x + b.width > 375)) throw new Error("main nav does not fit one row at 375px");
+  await mainNav.first().focus();
+  for (const label of ["Trust", "Audit log", "Settings"]) {
+    await page.keyboard.press("Tab");
+    const focused = await page.evaluate(() => document.activeElement?.textContent?.trim());
+    if (focused !== label) throw new Error(`focus order: expected ${label}, got ${focused}`);
+  }
+  await page.evaluate(() => document.activeElement?.blur());
+  await snap("13-today-mobile");
   await page.setViewportSize({ width: 1440, height: 900 });
 
   // 08 Trust: security
@@ -136,7 +147,7 @@ try {
   await page.getByRole("heading", { name: /Blocked and tainted actions \(1\)/ }).waitFor();
   await page.getByRole("heading", { name: /Suspicious emails \([1-9]/ }).waitFor();
   await page.getByRole("button", { name: "Show what it tried" }).first().waitFor();
-  await page.getByRole("button", { name: /^Audit log · \d+ entries/ }).and(page.locator('[aria-expanded="false"]')).waitFor();
+  if (await page.getByRole("main").getByText(/audit log/i).count()) throw new Error("the audit log is still inside Trust");
   // by default the technical record is closed: no provenance sentence or rule id on screen
   for (const hidden of ["appears only in an email sent by", "guard:tainted-no-auto-allow"]) {
     if (await page.getByText(hidden).filter({ visible: true }).count()) throw new Error(`Trust shows "${hidden}" without opening Details`);
@@ -155,12 +166,28 @@ try {
   await page.getByRole("heading", { name: "Attack evaluation" }).waitFor();
   await snap("10-trust-eval");
 
-  // 11 Settings
+  // 11 Audit log: its own page, rows visible straight away, raw records closed
+  await nav("Audit log");
+  await page.getByRole("heading", { name: "Audit log", level: 1 }).waitFor();
+  await page.getByText("Every step Munshi took. Append-only, enforced by the database.").waitFor();
+  await page.getByRole("list", { name: "Audit entries" }).getByText(/^.*Guard allowed reminder:/).first().waitFor();
+  if (await page.locator("main details[open]").count()) throw new Error("a Raw record is open by default");
+  await top();
+  await snap("11-audit-log");
+  // on a phone: no sideways scroll, even with a long raw record open
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.getByLabel(/^Raw record /).first().click();
+  const wide = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+  if (wide > 0) throw new Error(`Audit log overflows a 375px screen by ${wide}px`);
+  await page.getByLabel(/^Raw record /).first().click();
+  await page.setViewportSize({ width: 1440, height: 900 });
+
+  // 12 Settings
   await nav("Settings");
   await page.getByRole("heading", { name: "Policies" }).waitFor();
   await page.getByText("Email is never sent without your approval.").waitFor();
   await top();
-  await snap("11-settings");
+  await snap("12-settings");
 
   await browser.close();
   browser = undefined;

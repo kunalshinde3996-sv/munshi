@@ -2,8 +2,11 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { ActionCard } from "./ActionRecord";
+import { NAV } from "./App";
 import type { Action, AuditEntry, SecurityEmail } from "./api";
-import { AuditLog, SuspiciousEmail } from "./pages/Security";
+import AuditLog, { AuditLogView } from "./pages/AuditLog";
+import Security, { SuspiciousEmail } from "./pages/Security";
+import Trust from "./pages/Trust";
 import { auditRefs, auditSentence, finalStatus, reasonWithoutProvenance, shortFlag, shortTitle } from "./plain";
 
 const ADDRESS = "refunds@amazon-support.example";
@@ -82,12 +85,37 @@ describe("audit log", () => {
   it("reports an unconfirmed undo", () => {
     expect(say("undone", { verified: { ok: false } })).toContain("(removal not confirmed)");
   });
-  it("is collapsed by default and shows the entry count", () => {
-    const html = renderToStaticMarkup(<AuditLog entries={[entry("login", {}, null)]} actions={[]} emails={[]} />);
-    expect(html).toContain("Audit log · 1 entry");
-    expect(html).toContain("Append-only, enforced by the database.");
-    expect(html).toContain('aria-expanded="false"');
-    expect(html).not.toContain("You signed in");
+});
+
+describe("audit log page", () => {
+  const login = (id: number, method: string): AuditEntry => ({ id, ts: 0, runId: null, actionId: null, event: "login", actor: "user", detail: { method } });
+
+  it("has its title and one line of explanation", () => {
+    const html = renderToStaticMarkup(<AuditLog actions={[]} />);
+    expect(html).toContain(">Audit log</h1>");
+    expect(html).toContain("Every step Munshi took. Append-only, enforced by the database.");
+  });
+  it("shows rows straight away, newest first, with every Raw record collapsed", () => {
+    const html = renderToStaticMarkup(<AuditLogView entries={[login(1, "password"), login(2, "demo_account")]} actions={[]} emails={[]} />);
+    expect(count(html, "<details")).toBe(2); // one per row, no outer collapse
+    expect(html).not.toMatch(/<details[^>]*\sopen/);
+    expect(html.indexOf("You signed in with the demo account")).toBeLessThan(html.indexOf("You signed in</p>"));
+    expect(html).not.toContain("latest 500");
+  });
+  it("says so when older entries are not shown", () => {
+    const html = renderToStaticMarkup(<AuditLogView entries={Array.from({ length: 500 }, (_, i) => login(i + 1, "password"))} actions={[]} emails={[]} />);
+    expect(html).toContain("Showing the latest 500 entries.");
+  });
+});
+
+describe("navigation", () => {
+  it("lists Today, Trust, Audit log, Settings in focus order", () => {
+    expect(NAV.map((n) => n.label)).toEqual(["Today", "Trust", "Audit log", "Settings"]);
+  });
+  it("keeps four Trust sections and no audit log in Security", () => {
+    const trust = renderToStaticMarkup(<Trust actions={[]} mode="sandbox" refresh={() => undefined} onEditRules={() => undefined} />);
+    expect([...trust.matchAll(/<button[^>]*>(Security|Activity|Policies|Eval)<\/button>/g)].map((m) => m[1])).toEqual(["Security", "Activity", "Policies", "Eval"]);
+    expect(renderToStaticMarkup(<Security onOpenEmail={() => undefined} />)).not.toMatch(/audit/i);
   });
 });
 

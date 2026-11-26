@@ -14,7 +14,7 @@ const TABS: { id: TrustTab; label: string }[] = [
   { id: "eval", label: "Eval" },
 ];
 
-/** "Behind the scenes": the full technical record, with rule ids, the audit log and evaluation numbers. */
+/** "Behind the scenes": the full technical record, with rule ids and evaluation numbers. */
 export default function Trust({ actions, mode, refresh, onEditRules }: {
   actions: Action[];
   mode: "sandbox" | "google" | undefined;
@@ -33,7 +33,7 @@ export default function Trust({ actions, mode, refresh, onEditRules }: {
           </button>
         ))}
       </nav>
-      {tab === "security" && <Security actions={actions} onOpenEmail={setEmail} />}
+      {tab === "security" && <Security onOpenEmail={setEmail} />}
       {tab === "activity" && <Activity actions={actions} refresh={refresh} onOpenEmail={setEmail} />}
       {tab === "policies" && <Rules onEdit={onEditRules} />}
       {tab === "eval" && <Eval />}
