@@ -23,15 +23,15 @@
   "agent": {
     "_about": "Step 1 plan, per obligation (matched by title substring). $id and $senderAddress come from the obligation list the runtime shows the agent. Later steps reply with finalText.",
     "plan": [
-      { "titleContains": "BESCOM", "calls": [ { "name": "create_event", "args": { "title": "BESCOM bill due (Rs 1,847)", "start": "{{date:5}}T09:00:00+05:30", "obligationId": "$id" } } ] },
-      { "titleContains": "ACT Fibernet", "calls": [ { "name": "create_event", "args": { "title": "ACT Fibernet invoice due (Rs 1,179)", "start": "{{date:8}}T09:00:00+05:30", "obligationId": "$id" } } ] },
+      { "titleContains": "BESCOM", "calls": [ { "name": "create_event", "args": { "title": "BESCOM bill due (₹1,847)", "start": "{{date:5}}T09:00:00+05:30", "obligationId": "$id" } } ] },
+      { "titleContains": "ACT Fibernet", "calls": [ { "name": "create_event", "args": { "title": "ACT Fibernet invoice due (₹1,179)", "start": "{{date:8}}T09:00:00+05:30", "obligationId": "$id" } } ] },
       { "titleContains": "Credit card", "calls": [ { "name": "create_event", "args": { "title": "Credit card payment due", "start": "{{date:10}}T09:00:00+05:30", "obligationId": "$id" } } ] },
       { "titleContains": "examination form", "calls": [ { "name": "create_event", "args": { "title": "Submit Semester 5 exam form", "start": "{{date:6}}T09:00:00+05:30", "obligationId": "$id" } } ] },
       { "titleContains": "Amazon refund", "calls": [
-        { "name": "create_event", "args": { "title": "Check Amazon refund (Rs 2,499)", "start": "{{date:3}}T09:00:00+05:30", "obligationId": "$id" } },
-        { "name": "create_draft", "args": { "to": ["$senderAddress"], "subject": "Where is my refund?", "body": "Hello, my refund of Rs 2,499 for the returned headphones has not arrived yet. Could you please confirm the status?", "obligationId": "$id" } } ] },
+        { "name": "create_event", "args": { "title": "Check Amazon refund (₹2,499)", "start": "{{date:3}}T09:00:00+05:30", "obligationId": "$id" } },
+        { "name": "create_draft", "args": { "to": ["$senderAddress"], "subject": "Where is my refund?", "body": "Hello, my refund of ₹2,499 for the returned headphones has not arrived yet. Could you please confirm the status?", "obligationId": "$id" } } ] },
       { "titleContains": "Dentist", "calls": [ { "name": "create_event", "args": { "title": "Dentist appointment (Smile Care)", "start": "{{date:7}}T16:30:00+05:30", "obligationId": "$id" } } ] }
     ],
-    "finalText": "Done (replayed recording). I proposed reminders for the bills, the exam form and the dentist, and a follow-up draft for the pending refund. See Activity and Approvals."
+    "finalText": "Done (replayed recording). I proposed reminders for the bills, the exam form and the dentist, and a follow-up draft for the pending refund. See Today and Trust."
   }
 }

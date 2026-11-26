@@ -1,7 +1,8 @@
 // The "one tap away" layer: source email, obligation evidence, and the full Guard record of an action.
 import { useEffect, useState } from "react";
 import { api, type Action, type EmailDetail, type Obligation } from "./api";
-import { Banner, DecisionChip, Drawer, Spinner, StatusBadge, useNow, Warnings } from "./components";
+import { ActionRecord, FinalStatus } from "./ActionRecord";
+import { Banner, Drawer, Spinner, useNow } from "./components";
 import { fullDue, money, relativeDue } from "./plain";
 
 type Mode = "sandbox" | "google" | undefined;
@@ -82,7 +83,7 @@ export function ObligationDrawer({ o, related, mode, onClose }: { o: Obligation;
           <ul className="space-y-2 text-sm">
             {related.map((a) => (
               <li key={a.id} className="space-y-1">
-                <StatusBadge a={a} now={now} />
+                <FinalStatus a={a} now={now} />
                 <p className="break-words">{a.preview}</p>
               </li>
             ))}
@@ -93,37 +94,15 @@ export function ObligationDrawer({ o, related, mode, onClose }: { o: Obligation;
   );
 }
 
-/** Full Guard record for one action: why it was gated, where each value came from, rule id and exact arguments. */
+/** Full Guard record for one action: where each value came from, rule id and exact arguments. */
 export function ActionDrawer({ a, mode, onClose }: { a: Action; mode: Mode; onClose: () => void }) {
+  const [email, setEmail] = useState<string | null>(null);
   const now = useNow();
+  if (email) return <EmailDrawer key="email" id={email} mode={mode} onClose={onClose} onBack={() => setEmail(null)} />;
   return (
-    <Drawer title={a.tainted ? "Why check this?" : "Details"} mode={mode} onClose={onClose}>
-      <p className="break-words font-medium">{a.preview}</p>
-      <Warnings a={a} />
-      {a.taint.length > 0 && (
-        <>
-          <h3 className="text-sm font-semibold">Where each address came from</h3>
-          <ul className="space-y-2 text-sm">
-            {a.taint.map((t, i) => (
-              <li key={i} className="break-words">
-                <b>{t.value}</b> ({t.arg}): {t.trusted ? <span className="text-accent-deep">trusted</span> : <span className="text-danger">untrusted</span>}
-                {t.allowlisted && ", in your contacts or your own address"}. {t.explanation}
-              </li>
-            ))}
-          </ul>
-        </>
-      )}
-      <h3 className="text-sm font-semibold">What the Guard decided</h3>
-      <div className="flex flex-wrap items-center gap-2"><DecisionChip a={a} /><StatusBadge a={a} now={now} /></div>
-      <p className="break-words text-sm">{a.reason}</p>
-      {a.verify && <p className="break-words text-sm text-soft">Read-back: {a.verify.detail}</p>}
-      <dl className="divide-y divide-line text-sm">
-        {a.rule && <Row label="Rule"><code>{a.rule}</code></Row>}
-        <Row label="Tool"><code>{a.tool}</code></Row>
-        <Row label="Risk tier">{a.tier}</Row>
-      </dl>
-      <h3 className="text-sm font-semibold">Exact arguments</h3>
-      <pre className="whitespace-pre-wrap break-words rounded-xl bg-mist p-3 text-xs">{JSON.stringify(a.args, null, 2)}</pre>
+    <Drawer key="action" title={a.tainted ? "Why check this?" : "Details"} mode={mode} onClose={onClose}>
+      <div><FinalStatus a={a} now={now} /></div>
+      <ActionRecord a={a} onOpenEmail={setEmail} />
     </Drawer>
   );
 }

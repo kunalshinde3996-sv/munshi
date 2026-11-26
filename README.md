@@ -22,7 +22,7 @@ All captured in demo mode on SANDBOX DATA.
 
 ![Trust: security view](docs/screenshots/08-trust-security.png)
 
-*Trust: the full record for anyone who wants it, with suspicious emails, rule ids, provenance and the append-only audit log.*
+*Trust: each suspicious email and flagged action in a few lines. "Show what it tried", "Details" and the collapsed audit log hold the full record: rule ids, provenance and raw entries.*
 
 ![Trust: attack evaluation](docs/screenshots/10-trust-eval.png)
 
@@ -115,7 +115,7 @@ Reproduce it with `npm run dev`; the click-by-click script is [docs/DEMO_SCRIPT.
 
 ![Today: needs you](docs/screenshots/04-today-brief.png)
 
-**05. Why?** The full provenance explanation, the Guard's rule, the risk tier and the exact arguments, one tap away.
+**05. Why?** The provenance explanation (stated once), a link to the source email, the Guard's rule, the risk tier and the exact arguments, one tap away.
 
 ![Why check this address](docs/screenshots/05-why-drawer.png)
 
@@ -127,11 +127,11 @@ Reproduce it with `npm run dev`; the click-by-click script is [docs/DEMO_SCRIPT.
 
 ![Handled with Undo](docs/screenshots/07-today-handled.png)
 
-**08. Trust, Security.** Suspicious emails, every blocked or tainted action with the rule that fired and the email that introduced the value, and the append-only audit log. The two injection emails produced no obligations, and the newsletter's hidden `display:none` text was stripped before extraction.
+**08. Trust, Security.** Suspicious emails show subject, sender and labels, plus one line of the injected text until you press "Show what it tried". Each blocked or tainted action shows a title, one short warning and how it ended; "Details" holds the rule, tool and tier, the provenance text and a link to the source email. The append-only audit log is collapsed; opened, it reads as one plain sentence per entry with the raw JSON behind each. The two injection emails produced no obligations, and the newsletter's hidden `display:none` text was stripped before extraction.
 
 ![Trust: security](docs/screenshots/08-trust-security.png)
 
-**09. Trust, Activity.** Every proposed action with the Guard's decision and read-back result, plus the latest run step by step.
+**09. Trust, Activity.** Every proposed action with its final status, for example "Allowed automatically · Verified ✓" or "Waiting for you", the same collapsed "Details", and the latest run step by step.
 
 ![Trust: activity](docs/screenshots/09-trust-activity.png)
 
@@ -443,7 +443,7 @@ Open http://localhost:5173, sign in (`demo@munshi.local` / `munshi-demo-2026`, o
 
 ## Testing
 
-162 Vitest tests in `apps/server/test/` and 12 in `apps/web/src/plain.test.ts`, all passing at the time of writing, plus an 8-step offline e2e scenario.
+162 Vitest tests in `apps/server/test/` and 24 in `apps/web/src/`, all passing at the time of writing, plus an 8-step offline e2e scenario.
 
 | Area | Tests | What is covered |
 |---|---|---|
@@ -459,6 +459,7 @@ Open http://localhost:5173, sign in (`demo@munshi.local` / `munshi-demo-2026`, o
 | Demo mode, resilience, health, eval | 11 | replay provider, crash handlers, error JSON, eval harness |
 | Origin policy | 4 | allowed browser origins and Host checks |
 | Web plain-language layer | 12 | approval sentences name every recipient, address warnings, home summary, dates and amounts |
+| Web Trust view | 12 | one reason stated once, collapsed details and audit log, final status, audit sentences |
 | End to end | 1 (8 steps) | scan, handle, approve, verify, undo, injection blocked, hold-window cancel, audit |
 
 ```bash
@@ -468,7 +469,7 @@ npm run eval:attacks   # attack evaluation
 npm run typecheck
 ```
 
-The web tests cover the pure functions only; there are no component tests. The README screenshots come from a Playwright script that drives the real UI and fails if an expected screen or label is missing, or if Today scrolls sideways at 375 px.
+The web tests cover the wording functions and the static markup of the Trust cards; they do not click anything. The README screenshots come from a Playwright script that drives the real UI and fails if an expected screen or label is missing, or if Today scrolls sideways at 375 px.
 
 ---
 
@@ -484,7 +485,7 @@ The web tests cover the pure functions only; there are no component tests. The R
 - Hold-window sends are released by an in-process 1 s scheduler. If the server is down at the deadline, the send happens late after restart (audited), never early and never lost.
 - Single local user, no HTTPS, no MFA. The SQLite file is not encrypted (only OAuth tokens are).
 - Google mode: last 14 days, max 30 emails, no attachments or pagination, calendar events created without invitation emails.
-- No component-level UI tests, and no automated accessibility audit. "Not now" is not saved: reloading the page shows the card again. Sandbox fixtures use reserved `.example` domains and fictional brands.
+- No interactive component tests, and no automated accessibility audit. "Not now" is not saved: reloading the page shows the card again. Sandbox fixtures use reserved `.example` domains and fictional brands.
 
 **Roadmap**
 

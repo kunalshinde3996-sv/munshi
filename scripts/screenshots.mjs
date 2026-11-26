@@ -135,6 +135,12 @@ try {
   await nav("Trust");
   await page.getByRole("heading", { name: /Blocked and tainted actions \(1\)/ }).waitFor();
   await page.getByRole("heading", { name: /Suspicious emails \([1-9]/ }).waitFor();
+  await page.getByRole("button", { name: "Show what it tried" }).first().waitFor();
+  await page.getByRole("button", { name: /^Audit log · \d+ entries/ }).and(page.locator('[aria-expanded="false"]')).waitFor();
+  // by default the technical record is closed: no provenance sentence or rule id on screen
+  for (const hidden of ["appears only in an email sent by", "guard:tainted-no-auto-allow"]) {
+    if (await page.getByText(hidden).filter({ visible: true }).count()) throw new Error(`Trust shows "${hidden}" without opening Details`);
+  }
   await top();
   await snap("08-trust-security");
 

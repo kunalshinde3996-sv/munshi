@@ -120,7 +120,7 @@ export const api = {
     }).then((r) => r.summary),
 };
 
-export type TaintInfo = { arg: string; value: string; trusted: boolean; allowlisted: boolean; explanation: string; origins?: { emailId: string | null }[] };
+export type TaintInfo = { arg: string; value: string; trusted: boolean; allowlisted: boolean; explanation: string; origins?: { emailId: string | null; subject?: string | null; hidden?: boolean }[] };
 export type Action = {
   id: string;
   runId: string;

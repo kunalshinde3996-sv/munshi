@@ -1,8 +1,8 @@
 import { useState } from "react";
-import { api2, type Action, type RunDetail } from "../api";
-import { Banner, Chip, DecisionChip, fmtTime, StatusBadge, usePoll, useNow, Warnings } from "../components";
-import { ActionDrawer } from "../drawers";
-import { plural } from "../plain";
+import { api, api2, type Action, type EmailRow, type RunDetail } from "../api";
+import { ActionCard, FinalStatus } from "../ActionRecord";
+import { Banner, fmtTime, usePoll, useNow } from "../components";
+import { plural, shortTitle } from "../plain";
 
 function Timeline({ d }: { d: RunDetail }) {
   const now = useNow();
@@ -11,20 +11,15 @@ function Timeline({ d }: { d: RunDetail }) {
     <ol className="space-y-3 border-l-2 border-line pl-4">
       {d.trace.map((t, i) => {
         if (t.kind === "proposed") {
+          // Title and outcome only: the reason for any flag is on the action's card below.
           const a = byId.get(String(t.actionId));
           return (
             <li key={i} className="space-y-1">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="text-xs text-soft">{fmtTime(t.ts)}</span>
-                {a ? <DecisionChip a={a} /> : <Chip tone="stone">{String(t.decision)}</Chip>}
-                {a && <StatusBadge a={a} now={now} />}
-                <span className="font-mono text-xs text-soft">{String(t.tool)}</span>
-              </div>
-              <p className="break-words text-sm font-medium">{String(t.preview)}</p>
-              <p className="break-words text-xs text-soft">
-                <code>{String(t.rule)}</code>: {String(t.reason)}
+              <p className="break-words text-sm font-medium">
+                <span className="mr-2 text-xs font-normal text-soft">{fmtTime(t.ts)}</span>
+                {a ? shortTitle(a) : String(t.preview)}
               </p>
-              {a && a.tainted && <Warnings a={a} />}
+              {a && <FinalStatus a={a} now={now} />}
             </li>
           );
         }
@@ -59,15 +54,15 @@ function LatestRun() {
   );
 }
 
-export default function Activity({ actions, mode, refresh }: { actions: Action[]; mode: "sandbox" | "google" | undefined; refresh: () => void }) {
+export default function Activity({ actions, refresh, onOpenEmail }: { actions: Action[]; refresh: () => void; onOpenEmail: (id: string) => void }) {
   const now = useNow();
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [showSkipped, setShowSkipped] = useState(false);
-  const [open, setOpen] = useState<string | null>(null);
+  const [emails, setEmails] = useState<EmailRow[]>([]);
+  usePoll(async () => setEmails(await api.emails()), 10000);
   const skipped = actions.filter((a) => a.decision === "skipped").length;
   const rows = showSkipped ? actions : actions.filter((a) => a.decision !== "skipped");
-  const openAction = actions.find((a) => a.id === open);
 
   const undo = async (a: Action) => {
     setBusy(a.id);
@@ -84,7 +79,7 @@ export default function Activity({ actions, mode, refresh }: { actions: Action[]
 
   return (
     <div className="space-y-4">
-      <p className="text-sm text-soft">Every proposed action, the Guard's decision, and the read-back result.</p>
+      <p className="text-sm text-soft">Everything Munshi proposed, and how it ended.</p>
       {err && <Banner tone="red">{err}</Banner>}
       <LatestRun />
       {skipped > 0 && (
@@ -93,35 +88,18 @@ export default function Activity({ actions, mode, refresh }: { actions: Action[]
           Show {plural(skipped, "skipped duplicate")}
         </label>
       )}
-      {rows.length === 0 ? (
-        <p className="panel p-8 text-center text-sm text-soft">No activity yet. On Today, scan your inbox, then let Munshi handle it.</p>
-      ) : (
-        <ul className="panel divide-y divide-line">
-          {rows.map((a) => (
-            <li key={a.id} className="flex flex-wrap items-start justify-between gap-3 p-4">
-              <div className="min-w-0 flex-1 basis-60 space-y-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <StatusBadge a={a} now={now} />
-                  <DecisionChip a={a} />
-                  <span className="text-xs text-soft">{fmtTime(a.createdAt)}</span>
-                </div>
-                <p className="break-words text-sm font-medium">{a.preview}</p>
-                {a.status === "verification_failed" && <p className="text-sm font-semibold text-danger">Read-back did not match: {a.verify?.detail}</p>}
-                {(a.status === "blocked" || a.status === "failed") && <p className="break-words text-xs text-danger">{a.reason}</p>}
-              </div>
-              <div className="flex items-center gap-3">
-                <button onClick={() => setOpen(a.id)} className="btn-text" aria-label={`Details: ${a.preview}`}>Details</button>
-                {a.canUndo ? (
-                  <button disabled={busy === a.id} onClick={() => void undo(a)} className="btn-quiet">{a.undoHint}</button>
-                ) : (
-                  a.undoHint && <span className="text-xs text-soft">{a.undoHint}</span>
-                )}
-              </div>
-            </li>
-          ))}
-        </ul>
-      )}
-      {openAction && <ActionDrawer a={openAction} mode={mode} onClose={() => setOpen(null)} />}
+      {rows.length === 0 && <p className="panel p-8 text-center text-sm text-soft">No activity yet. On Today, scan your inbox, then let Munshi handle it.</p>}
+      <div className="space-y-2">
+        {rows.map((a) => (
+          <ActionCard key={a.id} a={a} now={now} emails={emails} time={fmtTime(a.createdAt)} onOpenEmail={onOpenEmail}>
+            {a.canUndo ? (
+              <button disabled={busy === a.id} onClick={() => void undo(a)} className="btn-quiet">{a.undoHint}</button>
+            ) : a.undoHint ? (
+              <span className="text-xs text-soft">{a.undoHint}</span>
+            ) : null}
+          </ActionCard>
+        ))}
+      </div>
     </div>
   );
 }

@@ -33,8 +33,8 @@ export default function Trust({ actions, mode, refresh, onEditRules }: {
           </button>
         ))}
       </nav>
-      {tab === "security" && <Security onOpenEmail={setEmail} />}
-      {tab === "activity" && <Activity actions={actions} mode={mode} refresh={refresh} />}
+      {tab === "security" && <Security actions={actions} onOpenEmail={setEmail} />}
+      {tab === "activity" && <Activity actions={actions} refresh={refresh} onOpenEmail={setEmail} />}
       {tab === "policies" && <Rules onEdit={onEditRules} />}
       {tab === "eval" && <Eval />}
       {email && <EmailDrawer id={email} mode={mode} onClose={() => setEmail(null)} />}
