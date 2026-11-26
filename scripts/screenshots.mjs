@@ -55,10 +55,10 @@ try {
   const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1 });
   const page = await ctx.newPage();
   const BASE = "http://localhost:5173/";
-  const snap = async (name) => {
+  const snap = async (name, options = {}) => {
     await page.waitForTimeout(1500); // let entrances, count-ups and fades finish
     const file = resolve(outDir, `${name}.png`);
-    await page.screenshot({ path: file });
+    await page.screenshot({ path: file, ...options });
     shots.push([name, statSync(file).size]);
     console.log(`  captured ${name}`);
   };
@@ -191,7 +191,24 @@ try {
   await page.getByRole("heading", { name: "Policies" }).waitFor();
   await page.getByText("Email is never sent without your approval.").waitFor();
   await top();
-  await snap("12-settings");
+  // Account on top across the full width; two top-aligned columns from 768px, one column below
+  const layout = () => page.evaluate(() => {
+    const box = (q) => document.querySelector(q).getBoundingClientRect();
+    const a = box('section[aria-label="Account"]'), l = box('[data-column="left"]'), r = box('[data-column="right"]');
+    return {
+      accountOnTop: a.bottom <= Math.min(l.top, r.top) && Math.abs(a.left - l.left) < 2 && Math.abs(a.right - Math.max(l.right, r.right)) < 2,
+      sideBySide: Math.abs(l.top - r.top) < 2 && r.left >= l.right,
+      stacked: r.top >= l.bottom,
+      overflow: document.documentElement.scrollWidth - window.innerWidth,
+    };
+  });
+  for (const [width, columns] of [[375, 1], [767, 1], [768, 2], [1440, 2]]) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.waitForTimeout(300);
+    const m = await layout();
+    if (!m.accountOnTop || m.overflow > 0 || (columns === 2 ? !m.sideBySide : !m.stacked)) throw new Error(`Settings layout at ${width}px: ${JSON.stringify(m)}`);
+  }
+  await snap("12-settings", { fullPage: true });
 
   // 14 account menu: opens on the first item, arrows move, Escape returns focus to the avatar
   await nav("Today");

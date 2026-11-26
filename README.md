@@ -147,7 +147,7 @@ Reproduce it with `npm run dev`; the click-by-click script is [docs/DEMO_SCRIPT.
 
 ![Audit log page](docs/screenshots/11-audit-log.png)
 
-**12. Settings.** Mailbox and Google connection, editable rules with plain-language drafting and a code-generated read-back, the contacts allowlist and Telegram.
+**12. Settings.** The account panel is on top, with who is signed in, the AI mode and server status, and "Sign out". Below it are two columns (one on a phone): the mailbox and Google connection with the editable rules (plain-language drafting with a code-generated read-back), beside the contacts allowlist and Telegram, whose setup steps stay open until it is set up.
 
 ![Settings](docs/screenshots/12-settings.png)
 
@@ -461,7 +461,7 @@ Open http://localhost:5173, sign in (`demo@munshi.local` / `munshi-demo-2026`, o
 
 ## Testing
 
-162 Vitest tests in `apps/server/test/` and 53 in `apps/web/src/`, all passing at the time of writing, plus a 9-step offline e2e scenario.
+162 Vitest tests in `apps/server/test/` and 55 in `apps/web/src/`, all passing at the time of writing, plus a 9-step offline e2e scenario.
 
 | Area | Tests | What is covered |
 |---|---|---|
@@ -478,7 +478,7 @@ Open http://localhost:5173, sign in (`demo@munshi.local` / `munshi-demo-2026`, o
 | Origin policy | 4 | allowed browser origins and Host checks |
 | Web plain-language layer | 12 | approval sentences name every recipient, address warnings, home summary, dates and amounts |
 | Web Trust and Audit log | 16 | one reason stated once, collapsed details, final status, audit sentences and page, navigation order |
-| Web interaction (jsdom) | 17 | sign out (and a failed sign out), account menu keyboard and Escape, reduced-motion class, locked Approve sends nothing, Undo offered only where real |
+| Web interaction (jsdom) | 19 | settings order and account panel, sign out (and a failed sign out), account menu keyboard and Escape, reduced-motion class, locked Approve sends nothing, Undo offered only where real |
 | Web theme | 8 | WCAG AA contrast in light and dark, no colour literals in components, reduced-motion stylesheet |
 | End to end | 1 (9 steps) | scan, handle, approve, verify, undo, injection blocked, hold-window cancel, audit, sign out then 401 |
 

@@ -1,6 +1,7 @@
 import { useCallback, useState } from "react";
 import { api, api2, channelsApi, type Contact, type Health, type PolicyDraft, type PolicyRow, type SchedulerStatus } from "../api";
 import { Banner, usePoll } from "../components";
+import { initials } from "../AccountMenu";
 import ModeControl from "../ModeControl";
 import { stagger, useEntrance } from "../motion";
 import { plural } from "../plain";
@@ -45,7 +46,7 @@ function Mailbox({ health, onModeChange }: { health: Health | null; onModeChange
   };
 
   return (
-    <Section title="Mailbox">
+    <Section title="Mailbox" order={2}>
       <div className="space-y-4">
         <ModeControl onModeChange={onModeChange} />
         {sched && (
@@ -134,111 +135,112 @@ export default function Settings({ health, offline, email, onModeChange, onSignO
       <div className="panel enter p-4 sm:p-5" style={stagger(0)}>
         <h1 className="font-display text-2xl font-semibold sm:text-3xl">Settings</h1>
       </div>
-      <div className="grid items-start gap-4 lg:grid-cols-2">
-      <div className="min-w-0 lg:order-2 lg:space-y-4">
-      <Mailbox health={health} onModeChange={onModeChange} />
-      </div>
-      <div className="min-w-0 lg:order-1">
-      <Section title="Policies">
-        <p className="text-sm text-soft">Your rules for what Munshi may do. The strictest one wins.</p>
-        {err && <Banner tone="red">{err}</Banner>}
 
-        <div className="inset space-y-3 p-3" role="group" aria-label="Plain-language rule">
-          <form className="flex flex-wrap gap-2" onSubmit={(e) => { e.preventDefault(); void compile(); }}>
-            <input value={sentence} onChange={(e) => { setSentence(e.target.value); setPending(null); }} minLength={5} maxLength={500} required
-              aria-label="Describe a rule in plain language" placeholder="Never email my professor without asking" className="field min-w-0 flex-1 basis-56" />
-            <button disabled={compiling} className="btn-primary">{compiling && <span className="spinner" aria-hidden />}{compiling ? "Drafting…" : "Draft rule"}</button>
-          </form>
-          <p className="text-xs text-soft">An AI drafts it. Nothing is active until you confirm.</p>
-          {pending && (
-            <div className="reveal space-y-3 rounded-xl bg-warn-wash p-4" role="group" aria-label="Draft rule">
-              <p className="text-sm font-semibold text-warn">Draft: not active yet</p>
-              <p className="text-sm"><b>In plain English:</b> {pending.readback}</p>
-              {pending.warnings.map((w) => <p key={w} className="rounded-lg bg-panel p-2 text-xs text-warn">{w}</p>)}
-              <details className="text-xs"><summary className="w-fit text-soft">Compiled rule (JSON)</summary><pre className="mt-1 overflow-x-auto rounded-lg bg-panel p-2">{JSON.stringify(pending.rule, null, 1)}</pre></details>
-              <div className="flex flex-wrap gap-2">
-                <button onClick={() => void run(() => api2.confirmPolicyDraft(pending.draftId), () => { setPending(null); setSentence(""); })} className="btn-primary">Confirm and save</button>
-                <button onClick={() => void run(() => api2.discardPolicyDraft(pending.draftId), () => setPending(null))} className="btn-quiet">Discard</button>
-              </div>
-            </div>
-          )}
-        </div>
-
-        <ul className="card divide-y divide-line">
-          {policies.map((p) => (
-            <li key={p.id} className="row flex flex-wrap items-start justify-between gap-3 p-4">
-              <RuleSummary p={p} />
-              <div className="flex gap-2">
-                <button onClick={() => void run(() => api2.togglePolicy(p.id, !p.enabled))} className="btn-quiet" aria-label={`${p.enabled ? "Disable" : "Enable"} rule ${p.id}`}>
-                  {p.enabled ? "Disable" : "Enable"}
-                </button>
-                <button onClick={() => void run(() => api2.deletePolicy(p.id))} className="btn-danger" aria-label={`Delete rule ${p.id}`}>Delete</button>
-              </div>
-            </li>
-          ))}
-        </ul>
-
-        <details className="text-sm">
-          <summary className="w-fit font-medium">Add a rule as JSON</summary>
-          <div className="reveal mt-3 space-y-2">
-            <textarea value={draft} onChange={(e) => setDraft(e.target.value)} rows={9} spellCheck={false} aria-label="Rule JSON" className="field w-full font-mono text-xs" />
-            <p className="text-xs text-soft">
-              <code>match</code>: <code>tool</code> (or "*"), <code>argsCondition</code> (literal, or contains / gte / lte / in / exists), <code>tainted</code>,{" "}
-              <code>allSensitiveAllowlisted</code>, <code>minObligationConfidence</code>. <code>decision</code>: allow, require_approval, block.
-            </p>
-            <button onClick={() => void addPolicy()} className="btn-quiet">Add rule</button>
-          </div>
-        </details>
-      </Section>
-      </div>
-      </div>
-
-      <div className="grid items-start gap-4 lg:grid-cols-2">
-      <Section title="Contacts" label="Contacts" order={2}>
-        <p className="text-sm text-soft">Only these addresses, and yours, count as known.</p>
-        <ul className="card divide-y divide-line">
-          {contacts.length === 0 && <li className="p-4 text-sm text-soft">No contacts yet.</li>}
-          {contacts.map((c) => (
-            <li key={c.id} className="flex items-center justify-between gap-3 p-4 text-sm">
-              <span className="min-w-0 break-words"><b>{c.name}</b> <span className="text-soft">&lt;{c.email}&gt;</span></span>
-              <button onClick={() => void run(() => api2.deleteContact(c.id))} className="text-danger underline" aria-label={`Remove ${c.name}`}>Remove</button>
-            </li>
-          ))}
-        </ul>
-        <form
-          className="flex flex-wrap gap-2"
-          onSubmit={(e) => {
-            e.preventDefault();
-            void run(() => api2.addContact(name, address), () => { setName(""); setAddress(""); });
-          }}
-        >
-          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Name" aria-label="Contact name" required className="field min-w-0 flex-1 basis-32" />
-          <input value={address} onChange={(e) => setAddress(e.target.value)} placeholder="email@example.com" aria-label="Contact email" required type="email" className="field min-w-0 flex-1 basis-48" />
-          <button className="btn-quiet">Add contact</button>
-        </form>
-      </Section>
-
-      <div className="min-w-0 space-y-4">
-      <Section title="Notifications" order={3}>
-        <TelegramCard />
-      </Section>
-
-      <Section title="Account" order={4}>
-        <div className="space-y-3 text-sm">
-          <p className="break-all">Signed in as <b>{email}</b></p>
-          <p className="text-soft">
+      <section className="panel enter flex flex-wrap items-center gap-x-4 gap-y-3 p-4 sm:p-5" style={stagger(1)} aria-label="Account">
+        <span aria-hidden className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-accent font-semibold text-on-accent">{initials(email)}</span>
+        <div className="min-w-0 flex-1 basis-48">
+          <p className="break-words">Signed in as <b className="break-all">{email}</b></p>
+          <p className="text-sm text-soft">
             AI: {health?.replay ? "demo, scripted" : health?.llmModel ? `${health.llmProvider}, ${health.llmModel}` : "not configured"}. Server: {offline ? "offline" : health?.ok ? "ok" : "connecting"}.
           </p>
-          <button
-            disabled={signingOut}
-            onClick={() => { setSigningOut(true); void onSignOut().catch(() => setSigningOut(false)); }}
-            className="btn-quiet text-danger"
-          >
-            {signingOut && <span className="spinner" aria-hidden />}{signingOut ? "Signing out…" : "Sign out"}
-          </button>
         </div>
-      </Section>
-      </div>
+        <button
+          disabled={signingOut}
+          onClick={() => { setSigningOut(true); void onSignOut().catch(() => setSigningOut(false)); }}
+          className="btn-quiet ml-auto text-danger"
+        >
+          {signingOut && <span className="spinner" aria-hidden />}{signingOut ? "Signing out…" : "Sign out"}
+        </button>
+      </section>
+
+      {/* Two independent columns from 768px (top-aligned, panels keep their natural height); one column below. */}
+      <div className="grid items-start gap-4 md:grid-cols-2">
+        <div className="min-w-0 space-y-4" data-column="left">
+          <Mailbox health={health} onModeChange={onModeChange} />
+          <Section title="Policies" order={3}>
+            <p className="text-sm text-soft">Your rules for what Munshi may do. The strictest one wins.</p>
+            {err && <Banner tone="red">{err}</Banner>}
+
+            <div className="inset space-y-3 p-3" role="group" aria-label="Plain-language rule">
+              <form className="flex flex-wrap gap-2" onSubmit={(e) => { e.preventDefault(); void compile(); }}>
+                <input value={sentence} onChange={(e) => { setSentence(e.target.value); setPending(null); }} minLength={5} maxLength={500} required
+                  aria-label="Describe a rule in plain language" placeholder="Never email my professor without asking" className="field min-w-0 flex-1 basis-56" />
+                <button disabled={compiling} className="btn-primary">{compiling && <span className="spinner" aria-hidden />}{compiling ? "Drafting…" : "Draft rule"}</button>
+              </form>
+              <p className="text-xs text-soft">An AI drafts it. Nothing is active until you confirm.</p>
+              {pending && (
+                <div className="reveal space-y-3 rounded-xl bg-warn-wash p-4" role="group" aria-label="Draft rule">
+                  <p className="text-sm font-semibold text-warn">Draft: not active yet</p>
+                  <p className="text-sm"><b>In plain English:</b> {pending.readback}</p>
+                  {pending.warnings.map((w) => <p key={w} className="rounded-lg bg-panel p-2 text-xs text-warn">{w}</p>)}
+                  <details className="text-xs"><summary className="w-fit text-soft">Compiled rule (JSON)</summary><pre className="mt-1 overflow-x-auto rounded-lg bg-panel p-2">{JSON.stringify(pending.rule, null, 1)}</pre></details>
+                  <div className="flex flex-wrap gap-2">
+                    <button onClick={() => void run(() => api2.confirmPolicyDraft(pending.draftId), () => { setPending(null); setSentence(""); })} className="btn-primary">Confirm and save</button>
+                    <button onClick={() => void run(() => api2.discardPolicyDraft(pending.draftId), () => setPending(null))} className="btn-quiet">Discard</button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <ul className="card divide-y divide-line">
+              {policies.map((p) => (
+                <li key={p.id} className="row flex px-4 py-3">
+                  <RuleSummary
+                    p={p}
+                    controls={
+                      <>
+                        <button onClick={() => void run(() => api2.togglePolicy(p.id, !p.enabled))} className="btn-quiet px-3 text-xs md:min-h-8 md:py-1" aria-label={`${p.enabled ? "Disable" : "Enable"} rule ${p.id}`}>
+                          {p.enabled ? "Disable" : "Enable"}
+                        </button>
+                        <button onClick={() => void run(() => api2.deletePolicy(p.id))} className="btn-danger px-3 text-xs md:min-h-8 md:py-1" aria-label={`Delete rule ${p.id}`}>Delete</button>
+                      </>
+                    }
+                  />
+                </li>
+              ))}
+            </ul>
+
+            <details className="text-sm">
+              <summary className="w-fit font-medium">Add a rule as JSON</summary>
+              <div className="reveal mt-3 space-y-2">
+                <textarea value={draft} onChange={(e) => setDraft(e.target.value)} rows={9} spellCheck={false} aria-label="Rule JSON" className="field w-full font-mono text-xs" />
+                <p className="text-xs text-soft">
+                  <code>match</code>: <code>tool</code> (or "*"), <code>argsCondition</code> (literal, or contains / gte / lte / in / exists), <code>tainted</code>,{" "}
+                  <code>allSensitiveAllowlisted</code>, <code>minObligationConfidence</code>. <code>decision</code>: allow, require_approval, block.
+                </p>
+                <button onClick={() => void addPolicy()} className="btn-quiet">Add rule</button>
+              </div>
+            </details>
+          </Section>
+        </div>
+        <div className="min-w-0 space-y-4" data-column="right">
+          <Section title="Contacts" order={4}>
+            <p className="text-sm text-soft">Only these addresses, and yours, count as known.</p>
+            <ul className="card divide-y divide-line">
+              {contacts.length === 0 && <li className="p-4 text-sm text-soft">No contacts yet.</li>}
+              {contacts.map((c) => (
+                <li key={c.id} className="flex items-center justify-between gap-3 p-4 text-sm">
+                  <span className="min-w-0 break-words"><b>{c.name}</b> <span className="text-soft">&lt;{c.email}&gt;</span></span>
+                  <button onClick={() => void run(() => api2.deleteContact(c.id))} className="text-danger underline" aria-label={`Remove ${c.name}`}>Remove</button>
+                </li>
+              ))}
+            </ul>
+            <form
+              className="flex flex-wrap gap-2"
+              onSubmit={(e) => {
+                e.preventDefault();
+                void run(() => api2.addContact(name, address), () => { setName(""); setAddress(""); });
+              }}
+            >
+              <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Name" aria-label="Contact name" required className="field min-w-0 flex-1 basis-32" />
+              <input value={address} onChange={(e) => setAddress(e.target.value)} placeholder="email@example.com" aria-label="Contact email" required type="email" className="field min-w-0 flex-1 basis-48" />
+              <button className="btn-quiet">Add contact</button>
+            </form>
+          </Section>
+          <Section title="Notifications" order={5}>
+            <TelegramCard />
+          </Section>
+        </div>
       </div>
     </div>
   );

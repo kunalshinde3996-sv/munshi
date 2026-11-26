@@ -96,13 +96,40 @@ describe("sign out", () => {
     expect(document.querySelector('nav[aria-label="Main"]')).not.toBeNull();
   });
 
-  it("is also offered in Settings", async () => {
+  it("is also offered in Settings, in the Account panel", async () => {
     const { calls } = fakeApi();
     await openApp();
     await click(button("Settings"));
+    expect(document.querySelector('section[aria-label="Account"]')!.contains(button("Sign out"))).toBe(true);
     await click(button("Sign out"));
     expect(calls).toContain("POST /api/auth/logout");
     expect(document.body.textContent).toContain("You're signed out");
+  });
+});
+
+describe("settings layout", () => {
+  const names = (root: ParentNode) => [...root.querySelectorAll(":scope > section")].map((s) => s.getAttribute("aria-label"));
+
+  it("puts Account on top, then two columns in reading and focus order", async () => {
+    fakeApi();
+    await openApp();
+    await click(button("Settings"));
+    const all = [...document.querySelectorAll("main section[aria-label]")].map((s) => s.getAttribute("aria-label"));
+    expect(all.slice(0, 5)).toEqual(["Account", "Mailbox", "Policies", "Contacts", "Notifications"]);
+    expect(names(document.querySelector('[data-column="left"]')!)).toEqual(["Mailbox", "Policies"]);
+    expect(names(document.querySelector('[data-column="right"]')!)).toEqual(["Contacts", "Notifications"]);
+    const grid = document.querySelector('[data-column="left"]')!.parentElement!;
+    expect(grid.className).toContain("items-start");
+    expect(grid.className).toContain("md:grid-cols-2");
+  });
+  it("shows who is signed in, with initials and a status line", async () => {
+    fakeApi();
+    await openApp();
+    await click(button("Settings"));
+    const account = document.querySelector('section[aria-label="Account"]')!;
+    expect(account.textContent).toContain("Signed in as demo@munshi.local");
+    expect(account.textContent).toContain("AI: demo, scripted. Server: ok.");
+    expect(account.querySelector("[aria-hidden]")!.textContent).toBe("D");
   });
 });
 

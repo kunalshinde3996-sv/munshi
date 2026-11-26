@@ -4,21 +4,24 @@ import { Chip, usePoll } from "../components";
 
 export const DECISION_TONE = { allow: "green", require_approval: "amber", block: "darkred" } as const;
 
-export function RuleSummary({ p }: { p: PolicyRow }) {
+/** A rule in two parts: what it says, then one line with its labels, its details and (in Settings) its controls. */
+export function RuleSummary({ p, controls }: { p: PolicyRow; controls?: React.ReactNode }) {
   return (
-    <div className="min-w-0 flex-1 basis-60 space-y-1">
-      <p className="break-words font-medium">{p.rule?.description ?? p.rule?.reason ?? p.id}</p>
-      <div className="flex flex-wrap items-center gap-2">
+    <div className="min-w-0 flex-1 space-y-1">
+      <p className="break-words text-sm font-medium">{p.rule?.description ?? p.rule?.reason ?? p.id}</p>
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
         {p.rule && <Chip tone={DECISION_TONE[p.rule.decision as keyof typeof DECISION_TONE] ?? "stone"}>{p.rule.decision.replace("_", " ")}</Chip>}
         {p.seed && <Chip tone="stone">default</Chip>}
         {!p.valid && <Chip tone="red">invalid: ignored</Chip>}
         {!p.enabled && <Chip tone="stone">disabled</Chip>}
+        {/* when opened, the details take their own full-width line below the controls */}
+        <details className="text-xs text-soft open:order-last open:basis-full">
+          <summary className="w-fit py-1">Details</summary>
+          <p className="reveal mt-1">Rule id: <code>{p.id}</code></p>
+          <pre className="reveal mt-1 overflow-x-auto rounded-xl bg-mist p-2">{JSON.stringify(p.rule?.match, null, 1)}</pre>
+        </details>
+        {controls && <span className="ml-auto flex gap-1">{controls}</span>}
       </div>
-      <details className="text-xs text-soft">
-        <summary className="w-fit">Details</summary>
-        <p className="reveal mt-1">Rule id: <code>{p.id}</code></p>
-        <pre className="reveal mt-1 overflow-x-auto rounded-xl bg-mist p-2">{JSON.stringify(p.rule?.match, null, 1)}</pre>
-      </details>
     </div>
   );
 }

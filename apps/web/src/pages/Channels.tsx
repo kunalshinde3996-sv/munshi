@@ -25,13 +25,14 @@ export default function TelegramCard() {
       {s?.bot && <p className="mt-2 text-xs text-soft">Bot: @{s.bot}</p>}
       {s?.lastError && <p className="mt-2 text-xs text-danger">Last error: {s.lastError}</p>}
       {err && <p className="mt-2 text-xs text-danger">{err}</p>}
-      <details className="mt-2 text-sm">
+      {/* open while there is still something to set up */}
+      <details className="mt-2 text-sm" open={Boolean(s && (!s.configured || !s.linked))}>
         <summary className="w-fit text-soft">How it works and setup</summary>
       <p className="mt-2 text-soft">
         Get approval requests (with the Guard preview and provenance warning) and due-date nudges on your phone. Approve or Reject with one tap; tainted actions need a second confirming tap. Decisions use the same Guard path and audit log as this app.
       </p>
       {s && (!s.configured || !s.linked) && (
-        <ol className="mt-3 list-decimal space-y-1 pl-5 text-sm ">
+        <ol className="mt-3 list-decimal space-y-1 break-words pl-5 text-sm">
           {s.setup.map((step) => <li key={step}>{step}</li>)}
         </ol>
       )}
