@@ -29,48 +29,35 @@ export default function Login({ onLoggedIn }: { onLoggedIn: (u: AuthUser) => voi
   return (
     <>
       <ReplayBanner health={health} />
-      <div className="grid min-h-[80vh] place-items-center px-4 py-10">
-        <form onSubmit={(e) => void submit(e)} className="w-full max-w-sm space-y-4 rounded-2xl border border-stone-200 bg-white p-6 shadow-sm sm:p-8">
-          <div className="flex items-center gap-3">
-            <Logo size={40} />
-            <div>
-              <h1 className="text-xl font-semibold tracking-tight">Sign in to Munshi</h1>
-              <p className="text-xs text-stone-500">Single-user app. There is no sign-up.</p>
-            </div>
+      <main className="grid min-h-[85vh] place-items-center px-4 py-10">
+        <form onSubmit={(e) => void submit(e)} className="w-full max-w-xs space-y-4">
+          <div className="space-y-3 pb-2">
+            <Logo size={44} />
+            <h1 className="font-display text-3xl font-semibold">Sign in to Munshi</h1>
           </div>
           {offline && <Banner tone="red">Cannot reach the server. Start it with <code>npm run dev:server</code>.</Banner>}
           {err && <Banner tone="red">{err}</Banner>}
+          {health?.demoLogin && (
+            <>
+              <button type="button" disabled={busy || offline} onClick={() => void submit(null, true)} className="btn-primary w-full">
+                Use demo account
+              </button>
+              <p className="text-center text-sm text-soft">or</p>
+            </>
+          )}
           <label className="block text-sm font-medium">
             Email
-            <input
-              type="email" autoComplete="username" required autoFocus value={email} onChange={(e) => setEmail(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm font-normal"
-            />
+            <input type="email" autoComplete="username" required value={email} onChange={(e) => setEmail(e.target.value)} className="field mt-1 w-full font-normal" />
           </label>
           <label className="block text-sm font-medium">
             Password
-            <input
-              type="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm font-normal"
-            />
+            <input type="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} className="field mt-1 w-full font-normal" />
           </label>
-          <button
-            type="submit" disabled={busy || offline}
-            className="w-full rounded-lg bg-ink px-4 py-2.5 text-sm font-semibold text-white hover:bg-ink/90 disabled:cursor-not-allowed disabled:opacity-40"
-          >
+          <button type="submit" disabled={busy || offline} className={`w-full ${health?.demoLogin ? "btn-quiet" : "btn-primary"}`}>
             {busy ? "Signing in…" : "Sign in"}
           </button>
-          {health?.demoLogin && (
-            <button
-              type="button" disabled={busy || offline} onClick={() => void submit(null, true)}
-              className="w-full rounded-lg border border-violet-300 bg-violet-50 px-4 py-2.5 text-sm font-semibold text-violet-900 hover:bg-violet-100 disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              Use demo account
-            </button>
-          )}
-          <p className="text-xs text-stone-500">The demo login is set in <code>.env</code> (<code>DEMO_USER_EMAIL</code> / <code>DEMO_USER_PASSWORD</code>).</p>
         </form>
-      </div>
+      </main>
     </>
   );
 }

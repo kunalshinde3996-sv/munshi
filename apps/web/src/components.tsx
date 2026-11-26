@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { onErrorToast, type Action } from "./api";
 
 export function usePoll(fn: () => Promise<void> | void, ms: number, deps: unknown[] = []) {
@@ -27,19 +27,19 @@ export function useNow(ms = 1000) {
 }
 
 const TONES = {
-  green: "bg-emerald-100 text-emerald-800",
-  amber: "bg-amber-100 text-amber-900",
-  red: "bg-red-100 text-red-800",
-  darkred: "bg-red-700 text-white",
-  stone: "bg-stone-100 text-stone-600",
-  blue: "bg-sky-100 text-sky-800",
+  green: "bg-wash text-accent-deep",
+  amber: "bg-warn-wash text-warn",
+  red: "bg-red-50 text-danger",
+  darkred: "bg-danger text-white",
+  stone: "bg-mist text-soft",
+  blue: "bg-sky-50 text-sky-900",
 } as const;
 
 export function Chip({ tone, children, title }: { tone: keyof typeof TONES; children: React.ReactNode; title?: string }) {
   return <span title={title} className={`inline-block whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-semibold ${TONES[tone]}`}>{children}</span>;
 }
 
-/** Guard decision chip: Allowed / Needs approval / Tainted / Blocked. */
+/** Guard decision chip, in the Guard's own words. Used in the Trust view only. */
 export function DecisionChip({ a }: { a: Pick<Action, "decision" | "tainted"> }) {
   if (a.decision === "block") return <Chip tone="darkred">Blocked</Chip>;
   if (a.decision === "skipped") return <Chip tone="stone">Skipped (duplicate)</Chip>;
@@ -68,28 +68,70 @@ export function StatusBadge({ a, now }: { a: Action; now: number }) {
 export function Warnings({ a }: { a: Action }) {
   if (!a.warnings.length) return null;
   return (
-    <div className="rounded-lg border border-red-300 bg-red-50 p-3 text-sm text-red-900" role="alert">
+    <div className="rounded-xl bg-warn-wash p-3 text-sm text-warn">
       <p className="font-semibold">⚠ Not from you</p>
-      <ul className="mt-1 list-disc space-y-1 pl-5">{a.warnings.map((w, i) => <li key={i}>{w}</li>)}</ul>
+      <ul className="mt-1 list-disc space-y-1 pl-5 break-words">{a.warnings.map((w, i) => <li key={i}>{w}</li>)}</ul>
     </div>
   );
 }
 
 export function Banner({ tone, children }: { tone: "red" | "amber" | "green"; children: React.ReactNode }) {
-  const c = { red: "border-red-200 bg-red-50 text-red-800", amber: "border-amber-200 bg-amber-50 text-amber-900", green: "border-emerald-200 bg-emerald-50 text-emerald-900" }[tone];
-  return <p className={`rounded-lg border p-3 text-sm ${c}`}>{children}</p>;
+  const c = { red: "bg-red-50 text-danger", amber: "bg-warn-wash text-warn", green: "bg-wash text-accent-deep" }[tone];
+  return <p role={tone === "red" ? "alert" : "status"} className={`break-words rounded-xl p-3 text-sm ${c}`}>{children}</p>;
 }
 
 export const fmtTime = (ts: number) => new Date(ts).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
 
-/** Brand mark: ledger "M" in paper on ink with a saffron rule and seal dot. Pure SVG. */
+/** Which data is on screen. Sandbox data is always labelled; real data is never labelled SANDBOX DATA. */
+export function DataBadge({ mode }: { mode: "sandbox" | "google" | undefined }) {
+  if (!mode) return null;
+  return (
+    <span className={`whitespace-nowrap rounded-full border px-2.5 py-0.5 text-[11px] font-semibold ${mode === "sandbox" ? "border-warn/30 bg-warn-wash text-warn" : "border-accent/30 bg-wash text-accent-deep"}`}>
+      {mode === "sandbox" ? "SANDBOX DATA" : "GOOGLE · LIVE DATA"}
+    </span>
+  );
+}
+
+/** Side sheet for everything that is one tap away. A native modal dialog: focus is trapped, Escape closes, focus returns. */
+export function Drawer({ title, mode, onClose, children }: { title: string; mode?: "sandbox" | "google"; onClose: () => void; children: React.ReactNode }) {
+  const ref = useRef<HTMLDialogElement>(null);
+  const titleId = useId();
+  useEffect(() => {
+    const d = ref.current!;
+    const opener = document.activeElement as HTMLElement | null;
+    if (!d.open) d.showModal();
+    return () => {
+      d.close();
+      opener?.focus();
+    };
+  }, []);
+  return (
+    <dialog
+      ref={ref}
+      aria-labelledby={titleId}
+      className="drawer overflow-y-auto p-0 shadow-2xl"
+      onCancel={(e) => { e.preventDefault(); onClose(); }}
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div className="min-h-full space-y-4 p-5 sm:p-7">
+        <div className="flex items-center justify-between gap-3">
+          <DataBadge mode={mode} />
+          <button onClick={onClose} className="btn-quiet ml-auto" aria-label="Close details">Close</button>
+        </div>
+        <h2 id={titleId} className="font-display break-words text-2xl font-semibold">{title}</h2>
+        {children}
+      </div>
+    </dialog>
+  );
+}
+
+/** Brand mark: a ledger "M" over a ruled line. Pure SVG. */
 export function Logo({ size = 32 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 32 32" role="img" aria-label="Munshi logo">
-      <rect width="32" height="32" rx="8" fill="#1c2434" />
-      <path d="M8 23h16" stroke="#d9770a" strokeWidth="2.4" strokeLinecap="round" />
-      <path d="M9 20V12l7 6 7-6v8" fill="none" stroke="#faf8f4" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
-      <circle cx="16" cy="7.5" r="1.8" fill="#d9770a" />
+      <rect width="32" height="32" rx="9" fill="#0f6b5c" />
+      <path d="M9 20V10l7 6 7-6v10" fill="none" stroke="#fff" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M9 25h14" stroke="#bfe0d6" strokeWidth="2" strokeLinecap="round" />
     </svg>
   );
 }
@@ -108,9 +150,9 @@ export function Toaster() {
   return (
     <div className="fixed bottom-4 right-4 z-50 flex w-[calc(100%-2rem)] max-w-sm flex-col gap-2" aria-live="assertive">
       {items.map((i) => (
-        <div key={i.id} role="alert" className="flex items-start justify-between gap-3 rounded-lg border border-red-300 bg-white p-3 text-sm text-red-800 shadow-lg">
+        <div key={i.id} role="alert" className="flex items-start justify-between gap-3 rounded-xl border border-danger/40 bg-white p-3 text-sm text-danger shadow-lg">
           <span>{i.text}</span>
-          <button onClick={() => setItems((x) => x.filter((y) => y.id !== i.id))} className="text-stone-400 hover:text-ink" aria-label="Dismiss">✕</button>
+          <button onClick={() => setItems((x) => x.filter((y) => y.id !== i.id))} className="text-soft hover:text-ink" aria-label="Dismiss">✕</button>
         </div>
       ))}
     </div>
@@ -119,23 +161,25 @@ export function Toaster() {
 
 export function Spinner({ label = "Loading…" }: { label?: string }) {
   return (
-    <p className="flex items-center gap-2 p-6 text-sm text-stone-500" role="status">
-      <span className="h-4 w-4 animate-spin rounded-full border-2 border-stone-300 border-t-saffron" />
+    <p className="flex items-center gap-2 p-6 text-sm text-soft" role="status">
+      <span className="h-4 w-4 rounded-full border-2 border-line border-t-accent motion-safe:animate-spin" />
       {label}
     </p>
   );
 }
 
 /** Shown on every screen (incl. onboarding) in demo mode: outputs are scripted samples, not a live model. */
-const BANNER_H = 28;
+const BANNER_H = 24;
 export function ReplayBanner({ health }: { health: { replay?: boolean; replayBanner?: string | null } | null }) {
   if (!health?.replay) return null;
   // Inline styles + fixed position: always visible, independent of page height, scrolling or generated CSS.
+  // Wraps rather than truncates, so the disclosure is never cut off on a narrow screen.
   return (
     <>
       <div
+        data-demo-bar
         role="status"
-        style={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 60, height: BANNER_H, lineHeight: `${BANNER_H}px`, background: "#6d28d9", color: "#fff", textAlign: "center", fontSize: 12, fontWeight: 700, letterSpacing: "0.04em" }}
+        style={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 60, minHeight: BANNER_H, display: "grid", placeItems: "center", padding: "2px 8px", background: "#17302c", color: "#e9f2ef", textAlign: "center", fontSize: 11, lineHeight: "14px", fontWeight: 500 }}
       >
         {health.replayBanner ?? "DEMO MODE — scripted sample outputs, not live AI"}
       </div>

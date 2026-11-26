@@ -1,25 +1,18 @@
 import { useEffect, useState } from "react";
 import { api, api2, authApi, onUnauthorized, type Action, type AuthUser, type Health } from "./api";
-import { Banner, Logo, ReplayBanner, Spinner, Toaster, usePoll } from "./components";
+import { Banner, DataBadge, Logo, ReplayBanner, Spinner, Toaster, usePoll } from "./components";
 import Login from "./Login";
 import Onboarding from "./Onboarding";
-import ModeControl, { ModeBadge } from "./ModeControl";
-import Activity from "./pages/Activity";
-import Approvals from "./pages/Approvals";
-import Inbox, { EmailDrawer } from "./pages/Inbox";
-import Security from "./pages/Security";
-import Policies from "./pages/Policies";
-import Eval from "./pages/Eval";
+import Settings from "./pages/Settings";
+import Today from "./pages/Today";
+import Trust from "./pages/Trust";
+import { useRun } from "./useRun";
 
-type Page = "inbox" | "approvals" | "activity" | "security" | "policies" | "eval";
-
-const TABS: { id: Page; label: string }[] = [
-  { id: "inbox", label: "Inbox" },
-  { id: "approvals", label: "Approvals" },
-  { id: "activity", label: "Activity" },
-  { id: "security", label: "Security" },
-  { id: "policies", label: "Policies" },
-  { id: "eval", label: "Eval" },
+type Page = "today" | "trust" | "settings";
+const NAV: { id: Page; label: string }[] = [
+  { id: "today", label: "Today" },
+  { id: "trust", label: "Trust" },
+  { id: "settings", label: "Settings" },
 ];
 
 /** Auth gate: shows the login screen until /api/auth/me confirms a session; any later 401 sends you back here. */
@@ -37,12 +30,14 @@ export default function App() {
 function Shell({ user, onLoggedOut }: { user: AuthUser; onLoggedOut: () => void }) {
   const [health, setHealth] = useState<Health | null>(null);
   const [offline, setOffline] = useState(false);
-  const [page, setPage] = useState<Page>("inbox");
-  const [openEmail, setOpenEmail] = useState<string | null>(null);
-  const [actions, setActions] = useState<Action[]>([]);
+  const [page, setPage] = useState<Page>("today");
+  const [actions, setActions] = useState<Action[] | null>(null);
+  const [snoozed, setSnoozed] = useState<string[]>([]); // "Not now": hidden in this window only; still pending on the server
   const refreshActions = async () => setActions(await api2.actions());
   usePoll(refreshActions, 2000);
-  const pending = actions.filter((x) => x.status === "pending_approval");
+  const refresh = () => void refreshActions().catch(() => undefined);
+  const run = useRun(refresh);
+  const pending = actions?.filter((a) => a.status === "pending_approval").length ?? 0;
 
   const loadHealth = () => api.health().then((h) => { setHealth(h); setOffline(false); }).catch(() => setOffline(true));
   usePoll(loadHealth, 5000);
@@ -53,7 +48,8 @@ function Shell({ user, onLoggedOut }: { user: AuthUser; onLoggedOut: () => void 
     const q = new URLSearchParams(window.location.search);
     const g = q.get("google");
     if (!g) return;
-    setNotice(g === "connected" ? { tone: "green", text: "Google connected. Use “Use Google” to switch the mailbox." } : { tone: "red", text: `Google connection failed: ${q.get("message") ?? g}` });
+    setNotice(g === "connected" ? { tone: "green", text: "Google connected. Press “Use Google” to switch mailbox." } : { tone: "red", text: `Google connection failed: ${q.get("message") ?? g}` });
+    setPage("settings");
     window.history.replaceState({}, "", window.location.pathname);
   }, []);
 
@@ -72,62 +68,49 @@ function Shell({ user, onLoggedOut }: { user: AuthUser; onLoggedOut: () => void 
     );
   }
 
+  const logout = () => void authApi.logout().catch(() => undefined).finally(onLoggedOut);
+
   return (
     <div className="min-h-screen">
+      <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:left-2 focus:top-8 focus:z-[70] focus:rounded-lg focus:bg-white focus:px-3 focus:py-2">Skip to content</a>
       <Toaster />
       <ReplayBanner health={health} />
-      <header className="border-b border-stone-200 bg-white">
-        <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-4 py-3">
-          <div className="flex items-center gap-2">
-            <Logo />
-            <span className="text-lg font-semibold tracking-tight">Munshi</span>
-          </div>
-          <div className="flex flex-wrap items-center justify-end gap-3">
-            <ModeControl onModeChange={() => void loadHealth()} />
-            <span className="hidden text-xs text-stone-500 md:inline" title="Signed in">{user.email}</span>
-            <button
-              onClick={() => void authApi.logout().catch(() => undefined).finally(onLoggedOut)}
-              className="rounded-lg border border-stone-300 bg-white px-3 py-1 text-xs font-medium hover:bg-stone-50"
-            >
-              Log out
-            </button>
-            <ModeBadge mode={health?.mode} />
-            <span className="hidden text-xs text-stone-500 sm:inline">
-              {health?.replay ? "demo · scripted" : health?.llmModel ? `${health.llmProvider} · ${health.llmModel}` : "LLM not configured"}
-            </span>
-            <span className={`flex items-center gap-1.5 text-xs ${offline ? "text-red-600" : "text-stone-500"}`}>
-              <span className={`h-2 w-2 rounded-full ${offline ? "bg-red-500" : health?.ok ? "bg-emerald-500" : "bg-stone-300"}`} />
-              {offline ? "server offline" : health?.ok ? "server ok" : "connecting…"}
-            </span>
-          </div>
+      <header className="mx-auto flex max-w-2xl flex-wrap items-center justify-between gap-x-4 gap-y-3 px-4 pt-5">
+        <div className="flex items-center gap-2">
+          <Logo size={28} />
+          <span className="font-display text-lg font-semibold">Munshi</span>
+          <DataBadge mode={health?.mode} />
         </div>
-        <nav className="mx-auto flex max-w-5xl gap-1 overflow-x-auto px-4" aria-label="Sections">
-          {TABS.map((t) => (
+        <nav className="flex gap-1" aria-label="Main">
+          {NAV.map((t) => (
             <button
               key={t.id}
               onClick={() => setPage(t.id)}
-              className={`shrink-0 border-b-2 px-3 py-2 text-sm font-medium ${
-                page === t.id ? "border-saffron text-ink" : "border-transparent text-stone-500 hover:text-ink"
-              }`}
+              aria-current={page === t.id ? "page" : undefined}
+              aria-label={t.id === "today" && pending > 0 && page !== "today" ? `Today, ${pending} waiting for you` : undefined}
+              className={`relative rounded-full px-4 py-2 text-sm font-semibold ${page === t.id ? "bg-white text-ink shadow-sm" : "text-soft hover:text-ink"}`}
             >
               {t.label}
-              {t.id === "approvals" && pending.length > 0 && (
-                <span className="ml-1.5 rounded-full bg-amber-500 px-1.5 py-0.5 text-xs font-bold text-white">{pending.length}</span>
-              )}
+              {t.id === "today" && pending > 0 && page !== "today" && <span aria-hidden className="absolute right-1 top-1.5 h-2 w-2 rounded-full bg-warn" />}
             </button>
           ))}
         </nav>
       </header>
 
-      <main key={health?.mode} className="mx-auto max-w-5xl space-y-6 px-4 py-8">
+      <main id="main" key={health?.mode} className="mx-auto max-w-2xl space-y-6 px-4 pb-24 pt-10">
+        {offline && <Banner tone="red">Can't reach the Munshi server. Is <code>npm run dev:server</code> running?</Banner>}
+        {health?.googleAuthProblem && health.mode === "google" && (
+          <Banner tone="red">
+            {health.googleAuthProblem}{" "}
+            <button className="font-semibold underline" onClick={() => (window.location.href = "/auth/google/start")}>Reconnect Google</button>
+          </Banner>
+        )}
         {notice && <Banner tone={notice.tone}>{notice.text}</Banner>}
-        {page === "inbox" && <Inbox health={health} onActionsChange={() => void refreshActions()} goToApprovals={() => setPage("approvals")} />}
-        {page === "approvals" && <Approvals pending={pending} refresh={() => void refreshActions()} />}
-        {page === "activity" && <Activity actions={actions} refresh={() => void refreshActions()} />}
-        {page === "security" && <Security onOpenEmail={setOpenEmail} />}
-        {page === "policies" && <Policies />}
-        {page === "eval" && <Eval />}
-        {openEmail && <EmailDrawer id={openEmail} onClose={() => setOpenEmail(null)} />}
+        {page === "today" && (
+          <Today health={health} actions={actions} refreshActions={refresh} run={run} snoozed={snoozed} setSnoozed={setSnoozed} goToTrust={() => setPage("trust")} />
+        )}
+        {page === "trust" && <Trust actions={actions ?? []} mode={health?.mode} refresh={refresh} onEditRules={() => setPage("settings")} />}
+        {page === "settings" && <Settings health={health} offline={offline} email={user.email} onModeChange={() => void loadHealth()} onLogout={logout} />}
       </main>
     </div>
   );

@@ -7,10 +7,10 @@ const pct = (n: number, d: number) => (d ? `${Math.round((n / d) * 100)}%` : "n/
 function Stat({ label, value, sub, tone = "stone" }: { label: string; value: string; sub?: string; tone?: "green" | "red" | "amber" | "stone" }) {
   const color = { green: "text-emerald-700", red: "text-red-700", amber: "text-amber-700", stone: "text-ink" }[tone];
   return (
-    <div className="rounded-xl border border-stone-200 bg-white p-4">
+    <div className="rounded-xl border border-line bg-white p-4">
       <div className={`text-3xl font-bold tabular-nums ${color}`}>{value}</div>
       <div className="mt-1 text-sm font-medium">{label}</div>
-      {sub && <div className="text-xs text-stone-500">{sub}</div>}
+      {sub && <div className="text-xs text-soft">{sub}</div>}
     </div>
   );
 }
@@ -25,12 +25,12 @@ export default function Eval() {
       .catch((e: Error) => setState({ loading: false, error: e.message }));
   }, []);
 
-  if (state.loading) return <p className="text-sm text-stone-500">Loading evaluation results…</p>;
+  if (state.loading) return <p className="text-sm text-soft">Loading evaluation results…</p>;
   if (state.error) return <Banner tone="red">{state.error}</Banner>;
   const r = state.result;
   if (!r)
     return (
-      <div className="rounded-xl border border-dashed border-stone-300 p-8 text-center text-sm text-stone-600">
+      <div className="rounded-xl border border-dashed border-stone-300 p-8 text-center text-sm text-soft">
         <p className="font-medium text-ink">No evaluation results yet.</p>
         <p className="mt-1">{state.hint ?? "Run `npm run eval:attacks` in the repo, then reload this tab."}</p>
       </div>
@@ -40,11 +40,11 @@ export default function Eval() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold">Attack evaluation</h1>
-        <p className="text-sm text-stone-600">
+        <h2 className="font-display text-lg font-semibold">Attack evaluation</h2>
+        <p className="text-sm text-soft">
           {a.total} prompt-injection emails and {b.total} benign emails that look suspicious, run through the real pipeline with a worst-case agent that tries to obey every injection. <b>SANDBOX DATA.</b>
         </p>
-        <p className="mt-1 flex flex-wrap items-center gap-2 text-xs text-stone-500">
+        <p className="mt-1 flex flex-wrap items-center gap-2 text-xs text-soft">
           <span>{new Date(r.date).toLocaleString()}</span>
           <Chip tone={r.mode === "live" ? "green" : "amber"}>{r.mode === "live" ? "real LLM extractor" : "scripted worst-case extractor"}</Chip>
           <span>
@@ -57,7 +57,7 @@ export default function Eval() {
           )}
         </p>
         {r.mode === "scripted-worst-case" && (
-          <p className="mt-2 text-xs text-stone-600">
+          <p className="mt-2 text-xs text-soft">
             This run measures the deterministic layers (sanitiser, vetting, provenance, Guard). It does not measure how well a real model resists injection; run <code>npm run eval:attacks -- --live</code> for that.
           </p>
         )}
@@ -69,16 +69,16 @@ export default function Eval() {
         <Stat label="Benign emails flagged" value={pct(b.flagged, b.total)} sub={`${b.flagged}/${b.total} false-positive flags`} tone={b.flagged ? "amber" : "green"} />
         <Stat label="Benign tasks completed" value={`${b.tasksCompleted}/${b.total}`} sub="reminder created and verified" tone={b.tasksCompleted === b.total ? "green" : "amber"} />
       </div>
-      <p className="text-xs text-stone-600">
+      <p className="text-xs text-soft">
         Flagged at ingestion: {a.flagged}/{a.total}. Guard blocked or held for approval: {a.guardStopped}/{a.total}. Stress test: if a user approves every pending attacker action including tainted ones, {r.stress.effectsCreated} of{" "}
         {r.stress.pendingAttackerActions} would take effect ({r.stress.stillBlocked} stay blocked and cannot be approved).
       </p>
 
       <section>
-        <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-stone-500">Attack emails</h2>
-        <div className="overflow-x-auto rounded-xl border border-stone-200 bg-white">
+        <h3 className="mb-2 text-sm font-semibold">Attack emails</h3>
+        <div className="overflow-x-auto rounded-xl border border-line bg-white">
           <table className="w-full text-left text-xs">
-            <thead className="bg-stone-50 text-stone-500">
+            <thead className="bg-mist text-soft">
               <tr>
                 <th className="p-2">Style</th>
                 <th className="p-2">Flagged</th>
@@ -90,7 +90,7 @@ export default function Eval() {
             </thead>
             <tbody>
               {a.rows.map((x) => (
-                <tr key={x.id} className="border-t border-stone-100">
+                <tr key={x.id} className="border-t border-line">
                   <td className="p-2">{x.style}</td>
                   <td className="p-2">{x.flagged ? <Chip tone="amber">flagged</Chip> : <Chip tone="stone">not flagged</Chip>}</td>
                   <td className="p-2 font-mono">{x.tool}</td>
@@ -110,10 +110,10 @@ export default function Eval() {
       </section>
 
       <section>
-        <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-stone-500">Benign emails that look suspicious</h2>
-        <div className="overflow-x-auto rounded-xl border border-stone-200 bg-white">
+        <h3 className="mb-2 text-sm font-semibold">Benign emails that look suspicious</h3>
+        <div className="overflow-x-auto rounded-xl border border-line bg-white">
           <table className="w-full text-left text-xs">
-            <thead className="bg-stone-50 text-stone-500">
+            <thead className="bg-mist text-soft">
               <tr>
                 <th className="p-2">Style</th>
                 <th className="p-2">Flagged</th>
@@ -124,12 +124,12 @@ export default function Eval() {
             </thead>
             <tbody>
               {b.rows.map((x) => (
-                <tr key={x.id} className="border-t border-stone-100">
+                <tr key={x.id} className="border-t border-line">
                   <td className="p-2">{x.style}</td>
                   <td className="p-2">{x.flagged ? <Chip tone="amber">flagged</Chip> : "no"}</td>
                   <td className="p-2">{x.expectedObligationExtracted ? "yes" : "no"}</td>
                   <td className="p-2">{x.taskCompleted ? <Chip tone="green">yes</Chip> : <Chip tone="red">no</Chip>}</td>
-                  <td className="p-2 text-stone-600">{x.note}</td>
+                  <td className="p-2 text-soft">{x.note}</td>
                 </tr>
               ))}
             </tbody>

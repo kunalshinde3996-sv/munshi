@@ -62,12 +62,14 @@ try {
     shots.push([name, statSync(file).size]);
     console.log(`  captured ${name}`);
   };
-  const tab = (label) => page.locator("nav button", { hasText: new RegExp(`^${label}`) }).click();
+  const nav = (label) => page.getByRole("navigation", { name: "Main" }).getByRole("button", { name: new RegExp(`^${label}`) }).click();
+  const sub = (label) => page.getByRole("navigation", { name: "Trust sections" }).getByRole("button", { name: label, exact: true }).click();
+  const top = () => page.evaluate(() => window.scrollTo(0, 0));
 
-  // 01 login (demo banner + form + demo-account button)
+  // 01 login (demo bar + demo-account button + form)
   await page.goto(BASE);
   await page.getByRole("button", { name: "Sign in", exact: true }).waitFor();
-  await page.locator('text=DEMO MODE').first().waitFor();
+  await page.locator("text=DEMO MODE").first().waitFor();
   await page.getByRole("button", { name: "Use demo account" }).waitFor();
   await snap("01-login");
 
@@ -81,58 +83,82 @@ try {
   await snap("02-onboarding");
   await page.getByRole("button", { name: "Try sandbox" }).click();
 
-  // 03 inbox after scan
-  await page.getByRole("heading", { name: "Your inbox, as obligations" }).waitFor();
+  // 03 Today after a scan, before Munshi acts
+  await page.getByRole("heading", { name: "Ready when you are." }).waitFor();
   await page.getByRole("button", { name: "Scan inbox" }).click();
-  await page.getByText(/Scanned 15 emails/).waitFor({ timeout: 60_000 });
+  await page.getByText("Checked 15 emails.").waitFor({ timeout: 60_000 });
   await page.getByText("BESCOM electricity bill").first().waitFor();
-  await page.evaluate(() => window.scrollTo(0, 0));
-  await snap("03-inbox-obligations");
+  await page.getByRole("button", { name: "Let Munshi handle it" }).waitFor();
+  await top();
+  await snap("03-today-after-scan");
 
-  // 04 security notes on the inbox
-  const notes = page.getByRole("heading", { name: /Security notes/ });
-  await notes.waitFor();
-  await notes.scrollIntoViewIfNeeded();
-  await page.evaluate(() => { const h = [...document.querySelectorAll("h2")].find((x) => /Security notes/.test(x.textContent || "")); h?.scrollIntoView({ block: "start" }); window.scrollBy(0, -80); });
-  await snap("04-security-notes");
+  // 04 Today brief: what needs you
+  await page.getByRole("button", { name: "Let Munshi handle it" }).click();
+  await page.getByRole("heading", { name: /things need you\./ }).waitFor({ timeout: 60_000 });
+  await page.getByText("This address came from the email, not from you.").waitFor();
+  await page.getByText("5 reminders added").waitFor(); // the run has finished proposing; nothing is still in flight
+  await top();
+  await snap("04-today-brief");
 
-  // 05 run timeline
-  await page.evaluate(() => window.scrollTo(0, 0));
-  await page.getByRole("button", { name: "Handle these" }).click();
-  await page.getByText(/need your approval/).waitFor({ timeout: 60_000 });
-  await page.evaluate(() => { const h = [...document.querySelectorAll("h2")].find((x) => /Handle these/.test(x.textContent || "")); h?.scrollIntoView({ block: "start" }); window.scrollBy(0, -80); });
-  await snap("05-run-timeline");
+  // 05 "Why?" drawer: full provenance for the tainted draft
+  await page.getByRole("button", { name: "Why?" }).click();
+  await page.getByRole("dialog").getByText("Where each address came from").waitFor();
+  await snap("05-why-drawer");
+  await page.keyboard.press("Escape");
+  await page.getByRole("dialog").waitFor({ state: "hidden" });
 
-  // 06 approvals: tainted draft card in view
-  await tab("Approvals");
-  await page.getByText("Where is my refund?").first().waitFor();
-  await page.evaluate(() => { const a = [...document.querySelectorAll("article")].find((x) => /Not from you/.test(x.textContent || "")); a?.scrollIntoView({ block: "center" }); });
-  await snap("06-approvals");
+  // 06 obligation drawer: evidence quote and source email
+  await page.getByRole("region", { name: "Coming up" }).getByRole("button", { name: /BESCOM electricity bill/ }).click();
+  await page.getByRole("dialog").getByText("The line this came from").waitFor();
+  await snap("06-evidence-drawer");
+  await page.keyboard.press("Escape");
+  await page.getByRole("dialog").waitFor({ state: "hidden" });
 
-  // 07 activity: verified actions with Undo
-  await tab("Activity");
+  // 07 Handled, expanded, with Done and Undo
+  const handled = page.getByTestId("handled");
+  await handled.locator("summary").click();
+  await handled.getByText("Done ✓").first().waitFor();
+  await handled.getByRole("button", { name: /^Undo/ }).first().waitFor();
+  await handled.evaluate((el) => { el.scrollIntoView({ block: "start" }); window.scrollBy(0, -40); });
+  await snap("07-today-handled");
+
+  // 12 the same brief on a 375px phone (captured now, while approvals are pending)
+  await page.setViewportSize({ width: 375, height: 812 });
+  await handled.locator("summary").click();
+  await top();
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+  if (overflow > 0) throw new Error(`Today overflows a 375px screen by ${overflow}px`);
+  await snap("12-today-mobile");
+  await page.setViewportSize({ width: 1440, height: 900 });
+
+  // 08 Trust: security
+  await nav("Trust");
+  await page.getByRole("heading", { name: /Blocked and tainted actions \(1\)/ }).waitFor();
+  await page.getByRole("heading", { name: /Suspicious emails \([1-9]/ }).waitFor();
+  await top();
+  await snap("08-trust-security");
+
+  // 09 Trust: activity with verify and undo
+  await sub("Activity");
   await page.getByText("Verified").first().waitFor();
-  await page.getByRole("button", { name: /Undo/ }).first().waitFor();
-  await snap("07-activity");
+  await page.getByRole("button", { name: /^Undo$/ }).first().waitFor();
+  await snap("09-trust-activity");
 
-  // 08 security tab
-  await tab("Security");
-  await page.getByRole("heading", { name: /Blocked and tainted actions/ }).waitFor();
-  await snap("08-security-tab");
-
-  // 09 policies
-  await tab("Policies");
-  await page.getByRole("heading", { name: "Policies" }).waitFor();
-  await snap("09-policies");
-
-  // 10 eval
-  await tab("Eval");
+  // 10 Trust: eval
+  await sub("Eval");
   await page.getByRole("heading", { name: "Attack evaluation" }).waitFor();
-  await snap("10-eval");
+  await snap("10-trust-eval");
+
+  // 11 Settings
+  await nav("Settings");
+  await page.getByRole("heading", { name: "Policies" }).waitFor();
+  await page.getByText("Email is never sent without your approval.").waitFor();
+  await top();
+  await snap("11-settings");
 
   await browser.close();
   browser = undefined;
-  const bad = shots.filter(([, size]) => size < 20_000);
+  const bad = shots.filter(([, size]) => size < 10_000); // the calm screens are mostly flat colour, so their PNGs are small
   if (bad.length) throw new Error(`suspiciously small screenshots: ${bad.map((b) => b[0]).join(", ")}`);
   console.log(`\nDone: ${shots.length} screenshots in docs/screenshots/`);
 } catch (e) {

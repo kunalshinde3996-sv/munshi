@@ -120,7 +120,7 @@ export const api = {
     }).then((r) => r.summary),
 };
 
-export type TaintInfo = { arg: string; value: string; trusted: boolean; allowlisted: boolean; explanation: string };
+export type TaintInfo = { arg: string; value: string; trusted: boolean; allowlisted: boolean; explanation: string; origins?: { emailId: string | null }[] };
 export type Action = {
   id: string;
   runId: string;
@@ -161,6 +161,7 @@ export type SecurityEmail = { id: string; from: string; subject: string; source:
 
 export const api2 = {
   security: () => req<{ actions: SecurityAction[]; emails: SecurityEmail[] }>("/api/security"),
+  runs: () => req<{ runs: RunDetail["run"][] }>("/api/runs").then((r) => r.runs),
   startRun: (goal: string) => post<{ runId: string }>("/api/runs", { goal }),
   run: (id: string) => req<RunDetail>(`/api/runs/${id}`),
   actions: (status?: string) => req<{ actions: Action[] }>(`/api/actions${status ? `?status=${status}` : ""}`).then((r) => r.actions),

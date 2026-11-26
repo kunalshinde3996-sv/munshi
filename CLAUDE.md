@@ -121,7 +121,7 @@ Every tool declares: `riskTier`, `reversible`, `undoTool?`, `verifyTool?`, `sens
 - `TelegramChannel`: only `TELEGRAM_CHAT_ID` can act; other chats get only their chat id from `/start`. Approval requests (preview + provenance warning + Approve/Reject buttons) are sent once
   (`notifications` table dedupes). Decisions call `ActionExecutor.approve/reject(..., {channel:"telegram"})`: same Guard path, audit detail records the channel.
   Tainted: first tap shows a warning + "Confirm anyway" (nothing approved); only the second tap passes `acknowledgeTaint`.
-- Nudges: `syncNudges` creates a `notifications(kind=nudge)` row for each obligation due within 48h with no pending/approved/held/executed/verified action; delivered once to Telegram, shown in the Inbox banner (`GET /api/nudges`).
+- Nudges: `syncNudges` creates a `notifications(kind=nudge)` row for each obligation due within 48h with no pending/approved/held/executed/verified action; delivered once to Telegram, marked "Not handled yet" in Today's Coming up list (`GET /api/nudges`).
 - No token -> `GET /api/telegram` = `{configured:false}` + setup steps; UI shows "Not configured"; nothing else changes.
 
 ## Plain-language policies (Phase 2, C2) - guard/policy-compile.ts
@@ -133,12 +133,14 @@ Every tool declares: `riskTier`, `reversible`, `undoTool?`, `verifyTool?`, `sens
 ## Proactive scheduler (Phase 2, C3) - scheduler.ts
 - `ScanScheduler` (index.ts only; never built in tests): every `SCAN_INTERVAL_MIN` minutes (default 30, 0 = off) runs `scanInbox` (same LLM pacing + extraction cache) then `syncNudges`.
   It never starts an agent run and never executes or proposes an action, so R2 stays user-only. Overlapping passes are skipped; `scanInbox` calls on one DB are serialized.
-  Errors (incl. all-models-over-quota) are recorded and retried next interval. `GET /api/scheduler` shows status; the Inbox shows a status line.
+  Errors (incl. all-models-over-quota) are recorded and retried next interval. `GET /api/scheduler` shows status; Settings shows a status line and Today shows the last error.
 
 ## Demo polish (Phase 2, D) - apps/web
 - `Onboarding.tsx`: first-run screen (3 points + "Try sandbox", switches mode to sandbox if needed); flag in localStorage `munshi.onboarded`.
-- `components.tsx`: `Logo` (SVG), `Toaster` (fed by `onErrorToast` in api.ts: every failed write request, incl. server-unreachable), `Spinner`. Inbox has a loading state.
-- The default sandbox inbox is the 15 demo emails (9 legit, 4 noise, 2 injection). The 30 eval emails (fixtures/attacks) are added only if `SANDBOX_ATTACK_EMAILS=true` (default false); `eval:attacks` and the Eval tab data always use them regardless. `npm run demo:reset` reports which mailbox you get. `docs/DEMO_SCRIPT.md` = 2-minute click-by-click.
+- `components.tsx`: `Logo`, `Toaster` (fed by `onErrorToast` in api.ts: every failed write request, incl. server-unreachable), `Spinner`, `Drawer` (native modal dialog), `DataBadge` (SANDBOX DATA).
+- Nav is Today / Trust (Security, Activity, read-only Policies, Eval) / Settings (mailbox, policy editing, contacts, Telegram, account).
+- UI rules: main screens use plain language (`plain.ts`, unit-tested); tool names, tiers and rule ids appear only in drawers, collapsed details and Trust. Approval sentences are built from the exact args and always show every recipient. Tainted Approve stays locked until the checkbox. A/R act only on the focused card. "Not now" is client-only. "Blocked" is said only for flagged emails that yielded no obligations. Pending, held, failed and verification_failed actions are never collapsed away.
+- The default sandbox inbox is the 15 demo emails (9 legit, 4 noise, 2 injection). The 30 eval emails (fixtures/attacks) are added only if `SANDBOX_ATTACK_EMAILS=true` (default false); `eval:attacks` and the Eval view data always use them regardless. `npm run demo:reset` reports which mailbox you get. `docs/DEMO_SCRIPT.md` = 2-minute click-by-click.
 
 ## FP tuning + live checks
 - Sanitizer: every hidden finding is removed and reported, but only `suspicious` ones (instruction verbs, address/URL, injection phrasing, >=5 invisible chars) count as security flags (UI chips, /api/security, eval). Exfiltration phrasing needs an address/URL on the same line for whole-email flagging; extractor output fields (title/counterparty) still reject the address-free wording (`detectInstructionLike`).

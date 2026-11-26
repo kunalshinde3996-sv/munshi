@@ -12,22 +12,25 @@ All data is **SANDBOX DATA** (a fictional mailbox, dates relative to today). No 
 
 | Time | Click | Say |
 |---|---|---|
-| 0:00 | Sign in with the demo login from `.env` (`demo@munshi.local`), then on the onboarding screen press **Try sandbox** | "Munshi reads your inbox, finds what you owe, and acts through MCP tools. Everything here is a fictional sandbox mailbox." |
-| 0:15 | **Inbox**, press **Scan inbox** | "Each email goes to an extractor LLM in quarantine. It has no tools. Its output must pass strict schema checks, and every quote must appear verbatim in the email." |
-| 0:35 | Point at the obligation cards (bills, renewals, appointments) | "Bills, deadlines, renewals. Each card links to its source email." |
-| 0:45 | Press **Handle these** | "Now the agent gets only these validated obligations, never raw email text." |
-| 1:00 | **Approvals** tab: open a pending action, expand "Why the Guard asked" | "Anything external needs me. I see a plain-language preview and where each value came from." |
-| 1:10 | Approve a calendar reminder, then in **Activity** show **Verified ✓**, then **Undo** | "Executed, read back from the calendar to verify, and undoable." |
-| 1:25 | Inbox, **Security notes** section: open the "This week's best deals" newsletter (or the fake bank "URGENT: Verify your account" email) | "This email hides an instruction in invisible text telling the assistant to send my data to an outsider. The sanitiser stripped it and flagged it." |
-| 1:40 | **Security** tab | "The injected requests ended up here, blocked by a deterministic rule. No LLM decided that. The audit log is append-only." |
-| 1:50 | **Eval** tab | "We ran 20 injection emails plus 10 benign look-alikes against a worst-case compromised agent: 20 of 20 blocked or flagged, 0 attacker actions executed without the user." |
+| 0:00 | Press **Use demo account** (or sign in with the demo login from `.env`), then **Try sandbox** | "Opening Munshi should feel lighter than opening your inbox. Everything here is a fictional sandbox mailbox." |
+| 0:15 | **Today**, press **Scan inbox** | "Each email goes to an extractor LLM in quarantine. It has no tools. Its output must pass strict schema checks, and every quote must appear verbatim in the email." |
+| 0:30 | In **Coming up**, tap the BESCOM bill, show the quote, press **Close** | "One line per thing I owe. The proof is one tap away." |
+| 0:40 | Press **Let Munshi handle it** | "The agent gets only validated obligations, never raw email text. The headline now answers two questions: what needs me, and what is handled." |
+| 0:55 | On the draft card, point at the locked **Approve**, press **Why?**, then **Close** | "This address came from an email, not from me. The explanation and the exact rule are right here." |
+| 1:10 | Tick **I checked this address**, press **Approve**. On the other card press **Approve** | "Anything doubtful needs my yes. Executed, then read back to verify." |
+| 1:20 | Open **Handled**, press **Undo** on one reminder | "Everything else stayed out of my way, and it is undoable." |
+| 1:30 | Press the shield chip **2 suspicious emails blocked** | "That opens Trust. Two emails tried to give the assistant orders." |
+| 1:40 | In **Security**, open "This week's best deals" | "This one hides an instruction in invisible text. The sanitiser stripped it and flagged it. The audit log below is append-only." |
+| 1:50 | Trust, **Eval** | "20 injection emails plus 10 benign look-alikes against a worst-case compromised agent: 20 of 20 blocked or flagged, 0 attacker actions executed without the user." |
 | 2:00 | Done | "Less magic, more utility: the model proposes, code decides." |
+
+If judges ask for more: **Trust, Activity** has the run step by step, and **Trust, Policies** lists the rules with their ids. Rules are edited in **Settings** (plain-language drafting needs a live LLM).
 
 ## Honest notes to say if asked
 
 - The headline eval measures the deterministic layers (sanitiser, vetting, taint, Guard) with a scripted worst-case extractor and agent, not how well a real LLM resists injection. Re-run with `npm run eval:attacks -- --live`.
-- 6 of 10 benign look-alike emails raised a security flag (false positives); 9 of 10 benign tasks completed.
-- If the user clicks through every warned, tainted action, the Guard cannot protect them (approval fatigue). The Eval tab shows that stress test too.
+- 1 of 10 benign look-alike emails raised a security flag (a false positive); 10 of 10 benign tasks completed. The rules were tuned on these same fixtures.
+- If the user clicks through every warned, tainted action, the Guard cannot protect them (approval fatigue). The Eval view shows that stress test too.
 
 ## Recovery
 
