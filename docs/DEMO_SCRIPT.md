@@ -17,13 +17,15 @@ All data is **SANDBOX DATA** (a fictional mailbox, dates relative to today). No 
 | 0:30 | In **Coming up**, tap the BESCOM bill, show the quote, press **Close** | "One line per thing I owe. The proof is one tap away." |
 | 0:40 | Press **Let Munshi handle it** | "The agent gets only validated obligations, never raw email text. The headline now answers two questions: what needs me, and what is handled." |
 | 0:55 | On the draft card, point at the locked **Approve**, press **Why?**, then **Close** | "This address came from an email, not from me. The explanation and the exact rule are right here." |
-| 1:10 | Tick **I checked this address**, press **Approve**. On the other card press **Approve** | "Anything doubtful needs my yes. Executed, then read back to verify." |
+| 1:10 | Press the locked **Approve** once (it shakes and stays locked). Tick **I checked this address**, press **Approve**. On the other card press **Approve** | "It will not move until I check. Then it is executed and read back to verify. The card folds away and the message at the bottom offers a real Undo for five seconds." |
 | 1:20 | Open **Handled**, press **Undo** on one reminder | "Everything else stayed out of my way, and it is undoable." |
 | 1:30 | Press the shield chip **2 suspicious emails blocked** | "That opens Trust. Two emails tried to give the assistant orders." |
 | 1:40 | In **Security**, on "This week's best deals" press **Show what it tried** | "This one hid an instruction in invisible text. The sanitiser stripped it and flagged it." |
 | 1:45 | Top navigation, **Audit log**; open **Raw** on one row | "Every step is here in plain words, newest first, with the raw record underneath. It is append-only: the database refuses edits and deletes." |
 | 1:50 | **Trust**, then **Eval** | "20 injection emails plus 10 benign look-alikes against a worst-case compromised agent: 20 of 20 blocked or flagged, 0 attacker actions executed without the user." |
 | 2:00 | Done | "Less magic, more utility: the model proposes, code decides." |
+
+To close or to hand over: press the initials button (top right), then **Sign out**. The session ends on the server, you see "You're signed out", and **Sign in again** returns to the login page.
 
 If judges ask for more: **Details** on any card in Trust shows the rule id, tool, tier and exact arguments. **Trust, Activity** has the run step by step, and **Trust, Policies** lists the rules with their ids. Rules are edited in **Settings** (plain-language drafting needs a live LLM).
 
@@ -34,6 +36,9 @@ If judges ask for more: **Details** on any card in Trust shows the rule id, tool
 - If the user clicks through every warned, tainted action, the Guard cannot protect them (approval fatigue). The Eval view shows that stress test too.
 
 ## Recovery
+
+- No animations on the demo machine: the operating system's reduce-motion setting is on, and Munshi follows it. On Windows it is Settings, Accessibility, Visual effects, Animation effects.
+- The screen looks dark: Munshi follows the system theme. Switch the system to light if the projector needs it.
 
 - Scan fails with a quota message: wait for the stated delay or set `LLM_FALLBACK_MODEL`. Already-extracted emails are cached.
 - Want a clean slate: stop the server, `npm run demo:reset`, clear the site's local storage to see onboarding again.

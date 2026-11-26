@@ -16,15 +16,15 @@ export default function TelegramCard() {
   }, 5000);
 
   return (
-    <section className="panel p-4" aria-label="Telegram channel">
+    <section className="card p-4" aria-label="Telegram channel">
       <div className="flex items-center justify-between gap-2">
         <h3 className="font-semibold">Telegram</h3>
         {err ? <Chip tone="red">Unavailable</Chip> : !s ? <Chip tone="stone">Loading…</Chip> : !s.configured ? <Chip tone="stone">Not configured</Chip> : s.linked ? <Chip tone="green">Linked</Chip> : <Chip tone="amber">Send /start to your bot</Chip>}
       </div>
       <p className="mt-1 text-sm text-soft">Approvals and due-date nudges on your phone.</p>
       {s?.bot && <p className="mt-2 text-xs text-soft">Bot: @{s.bot}</p>}
-      {s?.lastError && <p className="mt-2 text-xs text-red-700">Last error: {s.lastError}</p>}
-      {err && <p className="mt-2 text-xs text-red-700">{err}</p>}
+      {s?.lastError && <p className="mt-2 text-xs text-danger">Last error: {s.lastError}</p>}
+      {err && <p className="mt-2 text-xs text-danger">{err}</p>}
       <details className="mt-2 text-sm">
         <summary className="w-fit text-soft">How it works and setup</summary>
       <p className="mt-2 text-soft">

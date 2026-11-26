@@ -10,11 +10,11 @@ All captured in demo mode on SANDBOX DATA.
 
 ![Today: the brief and the approval cards](docs/screenshots/04-today-brief.png)
 
-*Today: one sentence says what needs you and what is handled. A recipient that came from an email gets a short warning, and Approve stays locked until you tick "I checked this address".*
+*Today: a hero with the date, one sentence on what needs you and what is handled, and three counts. Below, "Needs you" sits beside "Coming up". A recipient that came from an email gets a short warning, and Approve stays locked until you tick "I checked this address".*
 
 ![Today after a scan: upcoming obligations as a timeline](docs/screenshots/03-today-after-scan.png)
 
-*Coming up: after a scan, obligations form a short timeline with amount and days left. Tap a row for the evidence quote.*
+*Coming up: after a scan, obligations are listed by when they are due, with amount and days left. Tap a row for the evidence quote.*
 
 ![Handled section expanded with Undo](docs/screenshots/07-today-handled.png)
 
@@ -151,9 +151,19 @@ Reproduce it with `npm run dev`; the click-by-click script is [docs/DEMO_SCRIPT.
 
 ![Settings](docs/screenshots/12-settings.png)
 
-**13. On a phone.** The same brief at 375 px wide.
+**13. On a phone.** The same brief at 375 px wide: one column, four tabs on one row, and the account button beside the logo.
 
 <img src="docs/screenshots/13-today-mobile.png" alt="Today on a narrow screen" width="300">
+
+**14. Account menu.** The initials button opens the account name and email, Settings, Trust and "Sign out". It works from the keyboard (arrows, Home, End), and Escape or a click outside closes it. The account has only an email address, so the name and initials come from the part before the "@".
+
+![Account menu](docs/screenshots/14-account-menu.png)
+
+**15. Signed out.** "Sign out" (in the menu or Settings) ends the session on the server first. This screen appears only after the server confirms; "Sign in again" returns to the login page. If the request fails, the app says you are still signed in.
+
+![Signed-out screen](docs/screenshots/15-signed-out.png)
+
+**Motion and appearance.** Motion is small and CSS-based (a sliding tab indicator, button and card feedback, a decided card folding away, toasts with the real Undo where one exists) and is switched off when the operating system asks for reduced motion. A dark theme follows the system setting.
 
 ---
 
@@ -332,7 +342,7 @@ More detail from [docs/eval-results.md](docs/eval-results.md): of the 20 attacke
 | SQLite (`better-sqlite3`) + Drizzle | Local, zero-setup ledger; triggers enforce the append-only audit log; migrations are checked in |
 | zod | Strict validation of LLM output, tool arguments and policy rules |
 | Vitest | Fast unit and scenario tests, including Fastify `inject` |
-| React 19 + Vite + Tailwind 4 | Quick, small UI with no component library |
+| React 19 + Vite + Tailwind 4 | Quick, small UI with no component or animation library; colours are CSS variables with light and dark values |
 | Plain `fetch` LLM adapters (Gemini, Anthropic) | Few dependencies; behaviour on 429/503/timeouts is explicit and tested |
 | `googleapis` (lazy, Google mode only) | Keeps the sandbox MCP child processes fast to start |
 | Playwright (dev only) | Generates the README screenshots (`npm run screenshots`) |
@@ -410,7 +420,7 @@ Open http://localhost:5173, sign in (`demo@munshi.local` / `munshi-demo-2026`, o
 | `npm run check:sqlite` | Verifies the native SQLite binding loads |
 | `npm run db:generate` | Generate a Drizzle migration from `apps/server/src/db/schema.ts` |
 | `npm run check:readme` | Verifies that the paths, scripts, env vars, tool names and links the README mentions exist |
-| `npm run screenshots` | demo:reset, start servers, sign in, capture the 13 README screenshots, stop servers |
+| `npm run screenshots` | demo:reset, start servers, sign in, capture the 15 README screenshots, stop servers |
 
 ---
 
@@ -451,7 +461,7 @@ Open http://localhost:5173, sign in (`demo@munshi.local` / `munshi-demo-2026`, o
 
 ## Testing
 
-162 Vitest tests in `apps/server/test/` and 28 in `apps/web/src/`, all passing at the time of writing, plus an 8-step offline e2e scenario.
+162 Vitest tests in `apps/server/test/` and 53 in `apps/web/src/`, all passing at the time of writing, plus a 9-step offline e2e scenario.
 
 | Area | Tests | What is covered |
 |---|---|---|
@@ -468,7 +478,9 @@ Open http://localhost:5173, sign in (`demo@munshi.local` / `munshi-demo-2026`, o
 | Origin policy | 4 | allowed browser origins and Host checks |
 | Web plain-language layer | 12 | approval sentences name every recipient, address warnings, home summary, dates and amounts |
 | Web Trust and Audit log | 16 | one reason stated once, collapsed details, final status, audit sentences and page, navigation order |
-| End to end | 1 (8 steps) | scan, handle, approve, verify, undo, injection blocked, hold-window cancel, audit |
+| Web interaction (jsdom) | 17 | sign out (and a failed sign out), account menu keyboard and Escape, reduced-motion class, locked Approve sends nothing, Undo offered only where real |
+| Web theme | 8 | WCAG AA contrast in light and dark, no colour literals in components, reduced-motion stylesheet |
+| End to end | 1 (9 steps) | scan, handle, approve, verify, undo, injection blocked, hold-window cancel, audit, sign out then 401 |
 
 ```bash
 npm test               # unit + integration
@@ -477,7 +489,7 @@ npm run eval:attacks   # attack evaluation
 npm run typecheck
 ```
 
-The web tests cover the wording functions and the static markup of the Trust cards; they do not click anything. The README screenshots come from a Playwright script that drives the real UI and fails if an expected screen or label is missing, or if Today scrolls sideways at 375 px.
+The web tests cover wording, theme contrast, static markup and, in jsdom, sign out, the account menu, reduced motion and the approval card. jsdom does no layout or CSS animation. The README screenshots come from a Playwright script that drives the real UI and fails if an expected screen or label is missing, or if Today scrolls sideways at 375 px.
 
 ---
 
@@ -493,7 +505,7 @@ The web tests cover the wording functions and the static markup of the Trust car
 - Hold-window sends are released by an in-process 1 s scheduler. If the server is down at the deadline, the send happens late after restart (audited), never early and never lost.
 - Single local user, no HTTPS, no MFA. The SQLite file is not encrypted (only OAuth tokens are).
 - Google mode: last 14 days, max 30 emails, no attachments or pagination, calendar events created without invitation emails.
-- No interactive component tests, and no automated accessibility audit. "Not now" is not saved: reloading the page shows the card again. Sandbox fixtures use reserved `.example` domains and fictional brands.
+- Layout and animation are not unit-tested, and there is no automated accessibility audit (contrast is checked for the colour tokens only). "Not now" is not saved: reloading the page shows the card again. Sandbox fixtures use reserved `.example` domains and fictional brands.
 
 **Roadmap**
 

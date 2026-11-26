@@ -179,6 +179,38 @@ export function brief(f: BriefFacts): string {
   return out.join(" ");
 }
 
+// ---- what a decision card and its toast say, from the server's answer ----
+
+export type Outcome = {
+  /** What the card's buttons turn into. */
+  button: string;
+  toast: string;
+  ok: boolean;
+  /** "server": POST undo (only when the server says the action can be undone). "unsnooze": bring the card back. */
+  undo: { kind: "server" | "unsnooze"; label: string } | null;
+};
+
+export function decisionOutcome(choice: "approve" | "reject" | "snooze", result: Action, emails: EmailRow[] = []): Outcome {
+  if (choice === "snooze") return { button: "Set aside", toast: "Set aside. It's still waiting.", ok: true, undo: { kind: "unsnooze", label: "Bring back" } };
+  // A rejection cannot be taken back: there is no API for it, so no Undo is offered.
+  if (choice === "reject") return { button: "✓ Rejected", toast: "Rejected. Nothing was done.", ok: true, undo: null };
+  const undo = result.canUndo ? { kind: "server" as const, label: result.undoHint ?? "Undo" } : null;
+  const title = doneTitle(result, emails);
+  switch (result.status) {
+    case "failed": return { button: "Didn't work", toast: `Approved, but it didn't work: ${title}`, ok: false, undo };
+    case "verification_failed": return { button: "Couldn't confirm", toast: `Approved, but couldn't confirm it worked: ${title}`, ok: false, undo };
+    case "held": return { button: "✓ Approved", toast: `Approved, waiting to send: ${title}`, ok: true, undo };
+    default: return { button: "✓ Approved", toast: `Approved: ${title}`, ok: true, undo };
+  }
+}
+
+/** Obligations due today through the next seven days (the same window as the "This week" group). */
+export const dueThisWeek = (obligations: Obligation[], now = Date.now()) =>
+  obligations.filter((o) => {
+    const n = daysAway(o.dueDate, now);
+    return n !== null && n >= 0 && n <= 7;
+  }).length;
+
 // ---- Trust view: one status, one reason, plain audit sentences ----
 
 export type StatusTone = "green" | "amber" | "darkred" | "stone" | "blue";

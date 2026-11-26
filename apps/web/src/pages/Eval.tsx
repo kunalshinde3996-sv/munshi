@@ -5,9 +5,9 @@ import { Banner, Chip } from "../components";
 const pct = (n: number, d: number) => (d ? `${Math.round((n / d) * 100)}%` : "n/a");
 
 function Stat({ label, value, sub, tone = "stone" }: { label: string; value: string; sub?: string; tone?: "green" | "red" | "amber" | "stone" }) {
-  const color = { green: "text-emerald-700", red: "text-red-700", amber: "text-amber-700", stone: "text-ink" }[tone];
+  const color = { green: "text-accent-deep", red: "text-danger", amber: "text-warn", stone: "text-ink" }[tone];
   return (
-    <div className="rounded-xl border border-line bg-white p-4">
+    <div className="card lift p-4">
       <div className={`text-3xl font-bold tabular-nums ${color}`}>{value}</div>
       <div className="mt-1 text-sm font-medium">{label}</div>
       {sub && <div className="text-xs text-soft">{sub}</div>}
@@ -30,7 +30,7 @@ export default function Eval() {
   const r = state.result;
   if (!r)
     return (
-      <div className="rounded-xl border border-dashed border-stone-300 p-8 text-center text-sm text-soft">
+      <div className="inset p-8 text-center text-sm text-soft">
         <p className="font-medium text-ink">No evaluation results yet.</p>
         <p className="mt-1">{state.hint ?? "Run `npm run eval:attacks` in the repo, then reload this tab."}</p>
       </div>
@@ -76,7 +76,7 @@ export default function Eval() {
 
       <section>
         <h3 className="mb-2 text-sm font-semibold">Attack emails</h3>
-        <div className="overflow-x-auto rounded-xl border border-line bg-white">
+        <div className="overflow-x-auto card">
           <table className="w-full text-left text-xs">
             <thead className="bg-mist text-soft">
               <tr>
@@ -111,7 +111,7 @@ export default function Eval() {
 
       <section>
         <h3 className="mb-2 text-sm font-semibold">Benign emails that look suspicious</h3>
-        <div className="overflow-x-auto rounded-xl border border-line bg-white">
+        <div className="overflow-x-auto card">
           <table className="w-full text-left text-xs">
             <thead className="bg-mist text-soft">
               <tr>

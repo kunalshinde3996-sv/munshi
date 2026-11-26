@@ -1,21 +1,72 @@
 @import "tailwindcss";
 
-/* Palette: mist ground, slate-green ink, one teal accent. Amber and red are signals only. All text pairs meet WCAG AA. */
+/*
+ * Every colour in the app is one of these variables (a test rejects literals elsewhere), so the dark theme is only
+ * a second set of values. Contrast of the text pairs is checked in theme.test.ts for both sets (WCAG AA).
+ * Sage canvas, white panels, one teal accent. Amber and red are signals only.
+ */
 @theme {
-  --color-mist: #f3f6f5;
+  --color-canvas: #ecefe8;
+  --color-panel: #ffffff;
+  --color-mist: #f2f4ef;
   --color-ink: #17302c;
-  --color-soft: #50635e;
-  --color-line: #dbe3e1;
+  --color-soft: #465a55;
+  --color-line: #d6ddd7;
+  --color-edge: #6f837e;
   --color-accent: #0f6b5c;
+  --color-accent-hover: #0a5347;
   --color-accent-deep: #0a5347;
-  --color-wash: #e3f0ec;
+  --color-on-accent: #ffffff;
+  --color-wash: #e0eee9;
   --color-warn: #7a4a00;
-  --color-warn-wash: #fff4dc;
-  --color-danger: #9b2c2c;
+  --color-warn-wash: #fff2d6;
+  --color-danger: #962626;
+  --color-danger-wash: #fdecec;
+  --color-on-danger: #ffffff;
+  --color-info: #0c4a6e;
+  --color-info-wash: #e3f1fb;
+  --color-inverse: #17302c;
+  --color-on-inverse: #eef6f3;
+  --color-scrim: #0a1613;
+}
+
+:root {
+  color-scheme: light dark;
+  --ease-calm: cubic-bezier(0.2, 0.8, 0.2, 1);
+  /* Brand green at 8% over the panel colour. */
+  --color-hero: color-mix(in srgb, var(--color-accent) 8%, var(--color-panel));
+  --lift-shadow: 0 10px 24px -16px color-mix(in srgb, var(--color-scrim) 55%, transparent);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-canvas: #0d1412;
+    --color-panel: #17211e;
+    --color-mist: #101916;
+    --color-ink: #e7f0ec;
+    --color-soft: #a8bbb5;
+    --color-line: #2d3d38;
+    --color-edge: #6f8a82;
+    --color-accent: #62cdb3;
+    --color-accent-hover: #7fd9c3;
+    --color-accent-deep: #9be3d1;
+    --color-on-accent: #06251e;
+    --color-wash: #1d3b33;
+    --color-warn: #f3c876;
+    --color-warn-wash: #382c12;
+    --color-danger: #f5a3a3;
+    --color-danger-wash: #3c1f20;
+    --color-on-danger: #2b0808;
+    --color-info: #a5d8f5;
+    --color-info-wash: #123246;
+    --color-inverse: #2a3c36;
+    --color-on-inverse: #eef6f3;
+    --color-scrim: #000000;
+  }
 }
 
 body {
-  @apply bg-mist text-ink antialiased;
+  @apply bg-canvas text-ink antialiased;
   font-family: "Segoe UI Variable Text", ui-sans-serif, system-ui, "Segoe UI", sans-serif;
 }
 
@@ -24,30 +75,127 @@ body {
   letter-spacing: -0.018em;
 }
 
+.bg-hero { background-color: var(--color-hero); }
+
 @layer base {
-  button:not(:disabled), summary { cursor: pointer; }
+  button:not(:disabled):not([aria-disabled="true"]), summary { cursor: pointer; }
   :focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
 }
 
+/* 44px tall on phones so every button is an easy thumb target. */
 @utility btn {
-  @apply inline-flex min-h-10 items-center justify-center gap-2 rounded-full px-5 py-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-45;
+  @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-full px-5 py-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-45 md:min-h-10;
 }
 
 @layer components {
-  .btn-primary { @apply btn bg-accent text-white enabled:hover:bg-accent-deep; }
-  .btn-quiet { @apply btn border border-line bg-white text-ink enabled:hover:border-soft; }
-  .btn-text { @apply rounded text-sm font-medium text-accent underline-offset-4 enabled:hover:underline disabled:opacity-45; }
-  .field { @apply rounded-xl border border-[#7d908b] bg-white px-3 py-2 text-sm text-ink; }
-  .panel { @apply rounded-2xl border border-line bg-white; }
+  .btn-primary { @apply btn bg-accent text-on-accent enabled:hover:bg-accent-hover; position: relative; overflow: hidden; }
+  .btn-quiet { @apply btn border border-line bg-panel text-ink enabled:hover:border-soft; }
+  .btn-danger { @apply btn text-danger enabled:hover:bg-danger-wash; }
+  .btn-text { @apply inline-flex items-center gap-2 rounded text-sm font-medium text-accent underline-offset-4 enabled:hover:underline disabled:opacity-45; }
+  .field { @apply rounded-xl border border-edge bg-panel px-3 py-2 text-sm text-ink; }
+  /* Surfaces: panels sit on the canvas, cards sit inside panels, insets are recessed. */
+  .panel { @apply rounded-2xl border border-line bg-panel; }
+  .card { @apply rounded-[14px] border border-line bg-panel; }
+  .inset { @apply rounded-[14px] bg-mist; }
 }
 
-/* Motion: only to show what just changed (a drawer opening, a section expanding). */
-@media (prefers-reduced-motion: no-preference) {
-  .reveal { animation: reveal 180ms ease-out; }
-  dialog.drawer[open] { animation: slide-in 220ms ease-out; }
+/* Locked "Approve": looks and announces as unavailable, but still receives the click so it can say why. */
+.btn-primary[aria-disabled="true"] {
+  background: var(--color-mist);
+  color: var(--color-soft);
+  box-shadow: inset 0 0 0 1px var(--color-line);
+  cursor: not-allowed;
 }
+
+.spinner {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  flex: none;
+  border-radius: 999px;
+  border: 2px solid color-mix(in srgb, currentColor 30%, transparent);
+  border-top-color: currentColor;
+  animation: spin 700ms linear infinite;
+}
+
+.ripple {
+  position: absolute;
+  border-radius: 999px;
+  background: currentColor;
+  opacity: 0.25;
+  pointer-events: none;
+  transform: scale(0);
+  animation: ripple 450ms var(--ease-calm) forwards;
+}
+
+/* ---- motion ---- every rule here is switched off by the reduced-motion block below ---- */
+.btn-primary, .btn-quiet, .btn-danger { transition: transform 150ms var(--ease-calm), border-color 150ms var(--ease-calm), background-color 150ms var(--ease-calm); }
+/* Ticking the checkbox eases the button into its enabled colour. */
+.btn-primary.btn-approve { transition: background-color 280ms var(--ease-calm), color 280ms var(--ease-calm), box-shadow 280ms var(--ease-calm), transform 150ms var(--ease-calm); }
+@media (hover: hover) {
+  .btn-primary:enabled:not([aria-disabled="true"]):hover,
+  .btn-quiet:enabled:hover,
+  .btn-danger:enabled:hover { transform: translateY(-2px); }
+}
+.btn-primary:enabled:not([aria-disabled="true"]):active,
+.btn-quiet:enabled:active,
+.btn-danger:enabled:active { transform: scale(0.96); }
+
+.lift { transition: transform 200ms var(--ease-calm), box-shadow 200ms var(--ease-calm); }
+.row { transition: transform 150ms var(--ease-calm), background-color 150ms var(--ease-calm); }
+@media (hover: hover) {
+  .lift:hover { transform: translateY(-2px); box-shadow: var(--lift-shadow); }
+  .row:hover { background-color: var(--color-mist); transform: translateX(2px); }
+}
+
+.nav-pill { position: absolute; left: 0; top: 0; z-index: 0; pointer-events: none; border-radius: 999px; }
+.nav-pill[data-ready="true"] { transition: transform 300ms var(--ease-calm), width 300ms var(--ease-calm); }
+
+/* Entrance: only while the screen's container is marked, which happens once per page load. */
+[data-entrance="on"] .enter {
+  animation: enter 380ms var(--ease-calm) backwards;
+  animation-delay: calc(var(--i, 0) * 55ms);
+}
+
+/* A decided card folds away: height and opacity together. */
+.collapsible { display: grid; grid-template-rows: 1fr; transition: grid-template-rows 320ms var(--ease-calm), opacity 320ms var(--ease-calm); }
+.collapsible > div { min-height: 0; }
+.collapsible[data-collapsed="true"] { grid-template-rows: 0fr; opacity: 0; }
+.collapsible[data-collapsed="true"] > div { overflow: hidden; }
+
+.shake { animation: shake 360ms var(--ease-calm); }
+.pop { animation: pop 180ms var(--ease-calm); transform-origin: top right; }
+.toast { animation: toast-in 260ms var(--ease-calm); }
+.fade-in { animation: fade-in 450ms var(--ease-calm); }
+.reveal { animation: reveal 180ms var(--ease-calm); }
+dialog.drawer[open] { animation: slide-in 240ms var(--ease-calm); }
+
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes ripple { to { transform: scale(1); opacity: 0; } }
+@keyframes enter { from { opacity: 0; transform: translateY(10px); } }
+@keyframes shake { 20% { transform: translateX(-6px); } 40% { transform: translateX(5px); } 60% { transform: translateX(-3px); } 80% { transform: translateX(2px); } }
+@keyframes pop { from { opacity: 0; transform: scale(0.95) translateY(-4px); } }
+@keyframes toast-in { from { opacity: 0; transform: translateY(12px); } }
+@keyframes fade-in { from { opacity: 0; } }
 @keyframes reveal { from { opacity: 0; transform: translateY(-4px); } }
 @keyframes slide-in { from { opacity: 0.4; transform: translateX(32px); } }
+
+/*
+ * Reduced motion. The class is set from the OS preference by useReducedMotionClass; the media query covers the moment
+ * before React runs. No animation, no transition, no hover or press movement. Colour and state changes still happen.
+ */
+:root.reduce-motion *, :root.reduce-motion *::before, :root.reduce-motion *::after {
+  animation: none !important;
+  transition: none !important;
+  scroll-behavior: auto !important;
+}
+:root.reduce-motion :is(.btn-primary, .btn-quiet, .btn-danger, .lift, .row):is(:hover, :active) { transform: none !important; }
+:root.reduce-motion .ripple { display: none; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+  :is(.btn-primary, .btn-quiet, .btn-danger, .lift, .row):is(:hover, :active) { transform: none !important; }
+  .ripple { display: none; }
+}
 
 dialog.drawer {
   position: fixed;
@@ -58,7 +206,7 @@ dialog.drawer {
   height: 100%;
   max-height: 100%;
   border: 0;
-  background: white;
+  background: var(--color-panel);
   color: var(--color-ink);
 }
 /* The demo disclosure stays uncovered, even when the drawer is full-screen on a phone. */
@@ -67,4 +215,4 @@ body:has([data-demo-bar]) dialog.drawer {
   height: calc(100% - 24px);
   max-height: calc(100% - 24px);
 }
-dialog.drawer::backdrop { background: rgb(23 48 44 / 0.35); }
+dialog.drawer::backdrop { background: color-mix(in srgb, var(--color-scrim) 40%, transparent); }

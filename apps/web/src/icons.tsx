@@ -24,15 +24,15 @@ export function Icon({ name, size = 20 }: { name: ObligationType | "shield"; siz
 export function CaughtUpArt() {
   return (
     <svg width="168" height="104" viewBox="0 0 168 104" fill="none" aria-hidden focusable="false">
-      <ellipse cx="84" cy="94" rx="76" ry="6" fill="#e3f0ec" />
-      <rect x="22" y="62" width="78" height="14" rx="3" fill="#0f6b5c" />
-      <rect x="28" y="65" width="72" height="8" fill="#ffffff" />
-      <rect x="22" y="75" width="78" height="14" rx="3" fill="#17302c" />
-      <path d="M36 62v14" stroke="#e3f0ec" strokeWidth="2" />
-      <path d="M112 62h30v14a15 15 0 0 1-30 0z" fill="#ffffff" stroke="#17302c" strokeWidth="2" />
-      <path d="M142 67h4a7 7 0 0 1 0 14h-6" stroke="#17302c" strokeWidth="2" />
-      <path d="M121 52c-5-7 5-9 0-17M133 52c-5-7 5-9 0-17" stroke="#0f6b5c" strokeWidth="2" strokeLinecap="round" />
-      <path d="M48 42l8 8 15-16" stroke="#0f6b5c" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
+      <ellipse cx="84" cy="94" rx="76" ry="6" fill="var(--color-wash)" />
+      <rect x="22" y="62" width="78" height="14" rx="3" fill="var(--color-accent)" />
+      <rect x="28" y="65" width="72" height="8" fill="var(--color-panel)" />
+      <rect x="22" y="75" width="78" height="14" rx="3" fill="var(--color-ink)" />
+      <path d="M36 62v14" stroke="var(--color-wash)" strokeWidth="2" />
+      <path d="M112 62h30v14a15 15 0 0 1-30 0z" fill="var(--color-panel)" stroke="var(--color-ink)" strokeWidth="2" />
+      <path d="M142 67h4a7 7 0 0 1 0 14h-6" stroke="var(--color-ink)" strokeWidth="2" />
+      <path d="M121 52c-5-7 5-9 0-17M133 52c-5-7 5-9 0-17" stroke="var(--color-accent)" strokeWidth="2" strokeLinecap="round" />
+      <path d="M48 42l8 8 15-16" stroke="var(--color-accent)" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }

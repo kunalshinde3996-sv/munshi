@@ -47,7 +47,7 @@ function LatestRun() {
   }, 3000);
   if (!d) return null;
   return (
-    <details className="panel">
+    <details className="card">
       <summary className="p-4 font-semibold">Latest run, step by step ({d.run.status.replace("_", " ")})</summary>
       <div className="reveal border-t border-line p-4"><Timeline d={d} /></div>
     </details>
@@ -88,7 +88,7 @@ export default function Activity({ actions, refresh, onOpenEmail }: { actions: A
           Show {plural(skipped, "skipped duplicate")}
         </label>
       )}
-      {rows.length === 0 && <p className="panel p-8 text-center text-sm text-soft">No activity yet. On Today, scan your inbox, then let Munshi handle it.</p>}
+      {rows.length === 0 && <p className="inset p-8 text-center text-sm text-soft">No activity yet. On Today, scan your inbox, then let Munshi handle it.</p>}
       <div className="space-y-2">
         {rows.map((a) => (
           <ActionCard key={a.id} a={a} now={now} emails={emails} time={fmtTime(a.createdAt)} onOpenEmail={onOpenEmail}>

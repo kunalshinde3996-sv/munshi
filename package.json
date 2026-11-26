@@ -27,6 +27,7 @@
     "check:readme": "node scripts/check-readme.mjs"
   },
   "devDependencies": {
+    "jsdom": "^26.1.0",
     "playwright": "^1.65.1"
   }
 }

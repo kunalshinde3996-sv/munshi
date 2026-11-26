@@ -8,7 +8,7 @@ export function SuspiciousEmail({ e, nothingTaken, onOpen }: { e: SecurityEmail;
   const injected = e.flags.injectionSuspected.map((x) => x.text);
   const quotes = injected.length ? injected : e.flags.hiddenContent.filter((h) => h.suspicious !== false).map((h) => h.text);
   return (
-    <li className="panel space-y-2 p-4 text-sm">
+    <li className="card lift space-y-2 p-4 text-sm">
       <div>
         <button onClick={onOpen} className="break-words text-left font-semibold hover:underline">{e.subject}</button>
         <p className="break-all text-xs text-soft">{e.from}</p>
@@ -47,12 +47,13 @@ export default function Security({ onOpenEmail }: { onOpenEmail: (id: string) =>
   const quiet = mail.filter((e) => e.status === "done" && e.obligationCount === 0 && !emails.some((s) => s.id === e.id));
 
   return (
-    <div className="space-y-8">
-      <p className="text-sm text-soft">What was blocked or flagged. Fixed code decides, never an AI model.</p>
+    <div className="space-y-4">
+      <p className="panel p-4 text-sm text-soft sm:px-5">What was blocked or flagged. Fixed code decides, never an AI model.</p>
 
-      <section className="space-y-3">
+      <div className="grid items-start gap-4 lg:grid-cols-2">
+      <section className="panel min-w-0 space-y-3 p-4 sm:p-5">
         <h2 className="font-display text-lg font-semibold">Suspicious emails ({emails.length})</h2>
-        {emails.length === 0 && <p className="panel p-6 text-center text-sm text-soft">No suspicious emails found.</p>}
+        {emails.length === 0 && <p className="inset p-6 text-center text-sm text-soft">No suspicious emails found.</p>}
         <ul className="space-y-2">
           {emails.map((e) => (
             <SuspiciousEmail key={e.id} e={e} nothingTaken={mail.find((m) => m.id === e.id)?.obligationCount === 0} onOpen={() => onOpenEmail(e.id)} />
@@ -60,14 +61,15 @@ export default function Security({ onOpenEmail }: { onOpenEmail: (id: string) =>
         </ul>
       </section>
 
-      <section className="space-y-3">
+      <section className="panel min-w-0 space-y-3 p-4 sm:p-5">
         <h2 className="font-display text-lg font-semibold">Blocked and tainted actions ({flagged.length})</h2>
-        {flagged.length === 0 && <p className="panel p-6 text-center text-sm text-soft">Nothing blocked or tainted yet.</p>}
+        {flagged.length === 0 && <p className="inset p-6 text-center text-sm text-soft">Nothing blocked or tainted yet.</p>}
         {flagged.map((a) => <ActionCard key={a.id} a={a} now={now} emails={mail} time={fmtTime(a.createdAt)} onOpenEmail={onOpenEmail} />)}
       </section>
+      </div>
 
       {quiet.length > 0 && (
-        <details className="text-sm">
+        <details className="panel p-4 text-sm sm:px-5">
           <summary className="w-fit font-medium">{quiet.length} other emails had nothing to do</summary>
           <ul className="reveal mt-2 space-y-1 pl-4">
             {quiet.map((e) => (

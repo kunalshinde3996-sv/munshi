@@ -71,7 +71,7 @@ export type ScanSummary = {
 
 type ToastListener = (text: string) => void;
 const toastListeners = new Set<ToastListener>();
-/** Subscribe to error toasts raised by failed write requests (see Toaster in components.tsx). */
+/** Subscribe to error toasts raised by failed write requests (see Toaster in toasts.tsx). */
 export const onErrorToast = (fn: ToastListener) => {
   toastListeners.add(fn);
   return () => void toastListeners.delete(fn);

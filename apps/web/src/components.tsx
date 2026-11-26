@@ -1,5 +1,4 @@
 import { useEffect, useId, useRef, useState } from "react";
-import { onErrorToast } from "./api";
 
 export function usePoll(fn: () => Promise<void> | void, ms: number, deps: unknown[] = []) {
   const ref = useRef(fn);
@@ -29,10 +28,10 @@ export function useNow(ms = 1000) {
 const TONES = {
   green: "bg-wash text-accent-deep",
   amber: "bg-warn-wash text-warn",
-  red: "bg-red-50 text-danger",
-  darkred: "bg-danger text-white",
+  red: "bg-danger-wash text-danger",
+  darkred: "bg-danger text-on-danger",
   stone: "bg-mist text-soft",
-  blue: "bg-sky-50 text-sky-900",
+  blue: "bg-info-wash text-info",
 } as const;
 
 export function Chip({ tone, children, title }: { tone: keyof typeof TONES; children: React.ReactNode; title?: string }) {
@@ -40,7 +39,7 @@ export function Chip({ tone, children, title }: { tone: keyof typeof TONES; chil
 }
 
 export function Banner({ tone, children }: { tone: "red" | "amber" | "green"; children: React.ReactNode }) {
-  const c = { red: "bg-red-50 text-danger", amber: "bg-warn-wash text-warn", green: "bg-wash text-accent-deep" }[tone];
+  const c = { red: "bg-danger-wash text-danger", amber: "bg-warn-wash text-warn", green: "bg-wash text-accent-deep" }[tone];
   return <p role={tone === "red" ? "alert" : "status"} className={`break-words rounded-xl p-3 text-sm ${c}`}>{children}</p>;
 }
 
@@ -93,40 +92,17 @@ export function Drawer({ title, mode, onClose, children }: { title: string; mode
 export function Logo({ size = 32 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 32 32" role="img" aria-label="Munshi logo">
-      <rect width="32" height="32" rx="9" fill="#0f6b5c" />
-      <path d="M9 20V10l7 6 7-6v10" fill="none" stroke="#fff" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M9 25h14" stroke="#bfe0d6" strokeWidth="2" strokeLinecap="round" />
+      <rect width="32" height="32" rx="9" fill="var(--color-accent)" />
+      <path d="M9 20V10l7 6 7-6v10" fill="none" stroke="var(--color-on-accent)" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M9 25h14" stroke="var(--color-on-accent)" strokeOpacity="0.6" strokeWidth="2" strokeLinecap="round" />
     </svg>
-  );
-}
-
-/** Error toasts for failed write requests. Auto-dismiss after 6s; also dismissable. */
-export function Toaster() {
-  const [items, setItems] = useState<{ id: number; text: string }[]>([]);
-  useEffect(() => {
-    let n = 0;
-    return onErrorToast((text) => {
-      const id = ++n;
-      setItems((x) => [...x.slice(-3), { id, text }]);
-      setTimeout(() => setItems((x) => x.filter((i) => i.id !== id)), 6000);
-    });
-  }, []);
-  return (
-    <div className="fixed bottom-4 right-4 z-50 flex w-[calc(100%-2rem)] max-w-sm flex-col gap-2" aria-live="assertive">
-      {items.map((i) => (
-        <div key={i.id} role="alert" className="flex items-start justify-between gap-3 rounded-xl border border-danger/40 bg-white p-3 text-sm text-danger shadow-lg">
-          <span>{i.text}</span>
-          <button onClick={() => setItems((x) => x.filter((y) => y.id !== i.id))} className="text-soft hover:text-ink" aria-label="Dismiss">✕</button>
-        </div>
-      ))}
-    </div>
   );
 }
 
 export function Spinner({ label = "Loading…" }: { label?: string }) {
   return (
     <p className="flex items-center gap-2 p-6 text-sm text-soft" role="status">
-      <span className="h-4 w-4 rounded-full border-2 border-line border-t-accent motion-safe:animate-spin" />
+      <span className="spinner text-accent" aria-hidden />
       {label}
     </p>
   );
@@ -143,7 +119,7 @@ export function ReplayBanner({ health }: { health: { replay?: boolean; replayBan
       <div
         data-demo-bar
         role="status"
-        style={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 60, minHeight: BANNER_H, display: "grid", placeItems: "center", padding: "2px 8px", background: "#17302c", color: "#e9f2ef", textAlign: "center", fontSize: 11, lineHeight: "14px", fontWeight: 500 }}
+        style={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 60, minHeight: BANNER_H, display: "grid", placeItems: "center", padding: "2px 8px", background: "var(--color-inverse)", color: "var(--color-on-inverse)", textAlign: "center", fontSize: 11, lineHeight: "14px", fontWeight: 500 }}
       >
         {health.replayBanner ?? "DEMO MODE — scripted sample outputs, not live AI"}
       </div>

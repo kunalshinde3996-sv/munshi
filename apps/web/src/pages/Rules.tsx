@@ -39,7 +39,7 @@ export default function Rules({ onEdit }: { onEdit: () => void }) {
           <li>Destructive and financial tools are never available to the agent.</li>
         </ul>
       </div>
-      <ul className="panel divide-y divide-line">
+      <ul className="card divide-y divide-line">
         {policies.map((p) => <li key={p.id} className="flex p-4"><RuleSummary p={p} /></li>)}
       </ul>
       <button onClick={onEdit} className="btn-quiet">Edit rules in Settings</button>

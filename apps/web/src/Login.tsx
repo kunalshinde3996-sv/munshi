@@ -30,7 +30,7 @@ export default function Login({ onLoggedIn }: { onLoggedIn: (u: AuthUser) => voi
     <>
       <ReplayBanner health={health} />
       <main className="grid min-h-[85vh] place-items-center px-4 py-10">
-        <form onSubmit={(e) => void submit(e)} className="w-full max-w-xs space-y-4">
+        <form onSubmit={(e) => void submit(e)} className="panel fade-in w-full max-w-sm space-y-4 p-6 sm:p-8">
           <div className="space-y-3 pb-2">
             <Logo size={44} />
             <h1 className="font-display text-3xl font-semibold">Sign in to Munshi</h1>
@@ -54,7 +54,7 @@ export default function Login({ onLoggedIn }: { onLoggedIn: (u: AuthUser) => voi
             <input type="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} className="field mt-1 w-full font-normal" />
           </label>
           <button type="submit" disabled={busy || offline} className={`w-full ${health?.demoLogin ? "btn-quiet" : "btn-primary"}`}>
-            {busy ? "Signing in…" : "Sign in"}
+            {busy && <span className="spinner" aria-hidden />}{busy ? "Signing in…" : "Sign in"}
           </button>
         </form>
       </main>

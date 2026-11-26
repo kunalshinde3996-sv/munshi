@@ -42,6 +42,8 @@ export function useRun(onChange: () => void) {
   const working = starting || (runId !== null && !detail) || status === "running";
   const waiting = status === "awaiting_approval";
   const failure = status === "failed" ? String([...(detail?.trace ?? [])].reverse().find((t) => t.kind === "error")?.summary ?? "Unknown error") : null;
-  return { goal, setGoal, start, working, waiting, failure, error };
+  /** How many actions the running agent has proposed so far (from the real trace). */
+  const steps = detail?.trace.filter((t) => t.kind === "proposed").length ?? 0;
+  return { goal, setGoal, start, working, waiting, failure, error, steps };
 }
 export type RunState = ReturnType<typeof useRun>;

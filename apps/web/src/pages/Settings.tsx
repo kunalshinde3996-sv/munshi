@@ -2,6 +2,7 @@ import { useCallback, useState } from "react";
 import { api, api2, channelsApi, type Contact, type Health, type PolicyDraft, type PolicyRow, type SchedulerStatus } from "../api";
 import { Banner, usePoll } from "../components";
 import ModeControl from "../ModeControl";
+import { stagger, useEntrance } from "../motion";
 import { plural } from "../plain";
 import TelegramCard from "./Channels";
 import { RuleSummary } from "./Rules";
@@ -14,9 +15,9 @@ const TEMPLATE = `{
   "reason": "I want to review wedding events myself."
 }`;
 
-function Section({ title, label, children }: { title: string; label?: string; children: React.ReactNode }) {
+function Section({ title, label, order = 1, children }: { title: string; label?: string; order?: number; children: React.ReactNode }) {
   return (
-    <section className="space-y-3" aria-label={label ?? title}>
+    <section className="panel enter space-y-3 p-4 sm:p-5" style={stagger(order)} aria-label={label ?? title}>
       <h2 className="font-display text-xl font-semibold">{title}</h2>
       {children}
     </section>
@@ -45,7 +46,7 @@ function Mailbox({ health, onModeChange }: { health: Health | null; onModeChange
 
   return (
     <Section title="Mailbox">
-      <div className="panel space-y-4 p-4">
+      <div className="space-y-4">
         <ModeControl onModeChange={onModeChange} />
         {sched && (
           <p className="text-sm text-soft" aria-label="Background scan status">
@@ -56,7 +57,9 @@ function Mailbox({ health, onModeChange }: { health: Health | null; onModeChange
           </p>
         )}
         <div className="flex flex-wrap items-center gap-3">
-          <button onClick={() => void rescan()} disabled={busy || !health?.llmConfigured} className="btn-quiet">{busy ? "Re-reading…" : "Re-scan all"}</button>
+          <button onClick={() => void rescan()} disabled={busy || !health?.llmConfigured} className="btn-quiet">
+            {busy && <span className="spinner" aria-hidden />}{busy ? "Re-reading your mail…" : "Re-scan all"}
+          </button>
           <span className="text-sm text-soft">Reads every email again.</span>
         </div>
         {msg && <Banner tone={msg.tone}>{msg.text}</Banner>}
@@ -65,13 +68,15 @@ function Mailbox({ health, onModeChange }: { health: Health | null; onModeChange
   );
 }
 
-export default function Settings({ health, offline, email, onModeChange, onLogout }: {
+export default function Settings({ health, offline, email, onModeChange, onSignOut }: {
   health: Health | null;
   offline: boolean;
   email: string;
   onModeChange: () => void;
-  onLogout: () => void;
+  onSignOut: () => Promise<void>;
 }) {
+  const [signingOut, setSigningOut] = useState(false);
+  const entrance = useEntrance("settings");
   const [policies, setPolicies] = useState<PolicyRow[]>([]);
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [draft, setDraft] = useState(TEMPLATE);
@@ -125,27 +130,32 @@ export default function Settings({ health, offline, email, onModeChange, onLogou
     });
 
   return (
-    <div className="space-y-10">
-      <h1 className="font-display text-3xl font-semibold">Settings</h1>
+    <div className="space-y-4" data-entrance={entrance}>
+      <div className="panel enter p-4 sm:p-5" style={stagger(0)}>
+        <h1 className="font-display text-2xl font-semibold sm:text-3xl">Settings</h1>
+      </div>
+      <div className="grid items-start gap-4 lg:grid-cols-2">
+      <div className="min-w-0 lg:order-2 lg:space-y-4">
       <Mailbox health={health} onModeChange={onModeChange} />
-
+      </div>
+      <div className="min-w-0 lg:order-1">
       <Section title="Policies">
         <p className="text-sm text-soft">Your rules for what Munshi may do. The strictest one wins.</p>
         {err && <Banner tone="red">{err}</Banner>}
 
-        <div className="panel space-y-3 p-4" role="group" aria-label="Plain-language rule">
+        <div className="inset space-y-3 p-3" role="group" aria-label="Plain-language rule">
           <form className="flex flex-wrap gap-2" onSubmit={(e) => { e.preventDefault(); void compile(); }}>
             <input value={sentence} onChange={(e) => { setSentence(e.target.value); setPending(null); }} minLength={5} maxLength={500} required
               aria-label="Describe a rule in plain language" placeholder="Never email my professor without asking" className="field min-w-0 flex-1 basis-56" />
-            <button disabled={compiling} className="btn-primary">{compiling ? "Drafting…" : "Draft rule"}</button>
+            <button disabled={compiling} className="btn-primary">{compiling && <span className="spinner" aria-hidden />}{compiling ? "Drafting…" : "Draft rule"}</button>
           </form>
           <p className="text-xs text-soft">An AI drafts it. Nothing is active until you confirm.</p>
           {pending && (
             <div className="reveal space-y-3 rounded-xl bg-warn-wash p-4" role="group" aria-label="Draft rule">
               <p className="text-sm font-semibold text-warn">Draft: not active yet</p>
               <p className="text-sm"><b>In plain English:</b> {pending.readback}</p>
-              {pending.warnings.map((w) => <p key={w} className="rounded-lg bg-white/70 p-2 text-xs text-warn">{w}</p>)}
-              <details className="text-xs"><summary className="w-fit text-soft">Compiled rule (JSON)</summary><pre className="mt-1 overflow-x-auto rounded-lg bg-white p-2">{JSON.stringify(pending.rule, null, 1)}</pre></details>
+              {pending.warnings.map((w) => <p key={w} className="rounded-lg bg-panel p-2 text-xs text-warn">{w}</p>)}
+              <details className="text-xs"><summary className="w-fit text-soft">Compiled rule (JSON)</summary><pre className="mt-1 overflow-x-auto rounded-lg bg-panel p-2">{JSON.stringify(pending.rule, null, 1)}</pre></details>
               <div className="flex flex-wrap gap-2">
                 <button onClick={() => void run(() => api2.confirmPolicyDraft(pending.draftId), () => { setPending(null); setSentence(""); })} className="btn-primary">Confirm and save</button>
                 <button onClick={() => void run(() => api2.discardPolicyDraft(pending.draftId), () => setPending(null))} className="btn-quiet">Discard</button>
@@ -154,15 +164,15 @@ export default function Settings({ health, offline, email, onModeChange, onLogou
           )}
         </div>
 
-        <ul className="panel divide-y divide-line">
+        <ul className="card divide-y divide-line">
           {policies.map((p) => (
-            <li key={p.id} className="flex flex-wrap items-start justify-between gap-3 p-4">
+            <li key={p.id} className="row flex flex-wrap items-start justify-between gap-3 p-4">
               <RuleSummary p={p} />
               <div className="flex gap-2">
                 <button onClick={() => void run(() => api2.togglePolicy(p.id, !p.enabled))} className="btn-quiet" aria-label={`${p.enabled ? "Disable" : "Enable"} rule ${p.id}`}>
                   {p.enabled ? "Disable" : "Enable"}
                 </button>
-                <button onClick={() => void run(() => api2.deletePolicy(p.id))} className="btn text-danger enabled:hover:bg-red-50" aria-label={`Delete rule ${p.id}`}>Delete</button>
+                <button onClick={() => void run(() => api2.deletePolicy(p.id))} className="btn-danger" aria-label={`Delete rule ${p.id}`}>Delete</button>
               </div>
             </li>
           ))}
@@ -180,10 +190,13 @@ export default function Settings({ health, offline, email, onModeChange, onLogou
           </div>
         </details>
       </Section>
+      </div>
+      </div>
 
-      <Section title="Contacts" label="Contacts">
+      <div className="grid items-start gap-4 lg:grid-cols-2">
+      <Section title="Contacts" label="Contacts" order={2}>
         <p className="text-sm text-soft">Only these addresses, and yours, count as known.</p>
-        <ul className="panel divide-y divide-line">
+        <ul className="card divide-y divide-line">
           {contacts.length === 0 && <li className="p-4 text-sm text-soft">No contacts yet.</li>}
           {contacts.map((c) => (
             <li key={c.id} className="flex items-center justify-between gap-3 p-4 text-sm">
@@ -205,19 +218,28 @@ export default function Settings({ health, offline, email, onModeChange, onLogou
         </form>
       </Section>
 
-      <Section title="Notifications">
+      <div className="min-w-0 space-y-4">
+      <Section title="Notifications" order={3}>
         <TelegramCard />
       </Section>
 
-      <Section title="Account">
-        <div className="panel space-y-3 p-4 text-sm">
+      <Section title="Account" order={4}>
+        <div className="space-y-3 text-sm">
           <p className="break-all">Signed in as <b>{email}</b></p>
           <p className="text-soft">
             AI: {health?.replay ? "demo, scripted" : health?.llmModel ? `${health.llmProvider}, ${health.llmModel}` : "not configured"}. Server: {offline ? "offline" : health?.ok ? "ok" : "connecting"}.
           </p>
-          <button onClick={onLogout} className="btn-quiet">Log out</button>
+          <button
+            disabled={signingOut}
+            onClick={() => { setSigningOut(true); void onSignOut().catch(() => setSigningOut(false)); }}
+            className="btn-quiet text-danger"
+          >
+            {signingOut && <span className="spinner" aria-hidden />}{signingOut ? "Signing out…" : "Sign out"}
+          </button>
         </div>
       </Section>
+      </div>
+      </div>
     </div>
   );
 }

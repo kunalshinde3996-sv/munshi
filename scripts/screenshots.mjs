@@ -56,7 +56,7 @@ try {
   const page = await ctx.newPage();
   const BASE = "http://localhost:5173/";
   const snap = async (name) => {
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(1500); // let entrances, count-ups and fades finish
     const file = resolve(outDir, `${name}.png`);
     await page.screenshot({ path: file });
     shots.push([name, statSync(file).size]);
@@ -138,6 +138,10 @@ try {
     const focused = await page.evaluate(() => document.activeElement?.textContent?.trim());
     if (focused !== label) throw new Error(`focus order: expected ${label}, got ${focused}`);
   }
+  await page.keyboard.press("Tab");
+  if (!(await page.evaluate(() => document.activeElement?.getAttribute("aria-haspopup") === "menu"))) throw new Error("focus order: the account avatar should follow the nav");
+  const avatar = await page.getByRole("button", { name: /^Account:/ }).boundingBox();
+  if (!avatar || avatar.x + avatar.width > 375 || avatar.height < 44) throw new Error("avatar does not fit, or is too small to tap, at 375px");
   await page.evaluate(() => document.activeElement?.blur());
   await snap("13-today-mobile");
   await page.setViewportSize({ width: 1440, height: 900 });
@@ -188,6 +192,32 @@ try {
   await page.getByText("Email is never sent without your approval.").waitFor();
   await top();
   await snap("12-settings");
+
+  // 14 account menu: opens on the first item, arrows move, Escape returns focus to the avatar
+  await nav("Today");
+  await top();
+  const account = page.getByRole("button", { name: /^Account:/ });
+  await account.click();
+  const menu = page.getByRole("menu", { name: "Account" });
+  await menu.waitFor();
+  await page.keyboard.press("ArrowDown");
+  if ((await page.evaluate(() => document.activeElement?.textContent)) !== "Trust") throw new Error("arrow keys do not move through the menu");
+  await page.keyboard.press("Escape");
+  await menu.waitFor({ state: "hidden" });
+  if (!(await account.evaluate((el) => el === document.activeElement))) throw new Error("Escape did not return focus to the avatar");
+  await account.click();
+  await snap("14-account-menu");
+
+  // 15 sign out: the real logout call, then the session is dead and the login page comes next
+  await menu.getByRole("menuitem", { name: "Sign out" }).click();
+  await page.getByRole("heading", { name: "You're signed out" }).waitFor();
+  const status = await page.evaluate(async () => (await fetch("/api/actions")).status);
+  if (status !== 401) throw new Error(`after sign out the API answered ${status}, not 401`);
+  await snap("15-signed-out");
+  await page.getByRole("button", { name: "Sign in again" }).click();
+  await page.getByRole("heading", { name: "Sign in to Munshi" }).waitFor();
+  await page.reload();
+  await page.getByRole("heading", { name: "Sign in to Munshi" }).waitFor(); // still signed out after a reload
 
   await browser.close();
   browser = undefined;

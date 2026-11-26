@@ -172,6 +172,15 @@ export async function runE2E(log: (line: string) => void = () => undefined): Pro
       const events = new Set(db.select().from(schema.auditLog).all().map((e) => e.event));
       for (const e of ["proposed", "decision", "approved", "executed", "verified", "undone", "held", "hidden_content_detected", "injection_suspected"]) assert.ok(events.has(e as never), `audit has ${e}`);
     });
+
+    await step("sign out: the session ends on the server and the old cookie gets 401", async () => {
+      assert.equal((await post("/api/auth/logout")).statusCode, 200);
+      for (const url of ["/api/auth/me", "/api/actions", "/api/obligations", "/api/audit"]) {
+        assert.equal((await app.inject({ method: "GET", url, headers: { cookie } })).statusCode, 401, url);
+      }
+      assert.equal((await post("/api/scan")).statusCode, 401, "writes are refused too");
+      assert.ok(db.select().from(schema.auditLog).all().some((e) => e.event === "logout"), "logout is audited");
+    });
   } finally {
     await app.close();
     rmSync(dir, { recursive: true, force: true });

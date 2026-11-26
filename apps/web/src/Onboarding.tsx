@@ -27,7 +27,7 @@ export default function Onboarding({ health, offline, onStart }: { health: Healt
 
   return (
     <main className="grid min-h-[90vh] place-items-center px-4 py-10">
-      <div className="w-full max-w-md space-y-7">
+      <div className="panel fade-in w-full max-w-md space-y-7 p-6 sm:p-8">
         <div className="space-y-3">
           <Logo size={44} />
           <h1 className="font-display text-3xl font-semibold">Less to keep in your head</h1>
@@ -45,7 +45,7 @@ export default function Onboarding({ health, offline, onStart }: { health: Healt
         {health && !health.llmConfigured && <Banner tone="amber">LLM not configured ({health.llmError}). Scanning needs a key in <code>.env</code>.</Banner>}
         {err && <Banner tone="red">{err}</Banner>}
         <button onClick={() => void start()} disabled={busy || offline} className="btn-primary min-h-12 w-full text-base">
-          {busy ? "Starting…" : "Try sandbox"}
+          {busy && <span className="spinner" aria-hidden />}{busy ? "Starting…" : "Try sandbox"}
         </button>
       </div>
     </main>

@@ -1,12 +1,17 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { api, api2, authApi, onUnauthorized, type Action, type AuthUser, type Health } from "./api";
-import { Banner, DataBadge, Logo, ReplayBanner, Spinner, Toaster, usePoll } from "./components";
+import AccountMenu from "./AccountMenu";
+import { Banner, DataBadge, Logo, ReplayBanner, Spinner, usePoll } from "./components";
 import Login from "./Login";
+import { resetEntrances, useReducedMotionClass, useRipple } from "./motion";
 import Onboarding from "./Onboarding";
 import AuditLog from "./pages/AuditLog";
 import Settings from "./pages/Settings";
 import Today from "./pages/Today";
 import Trust from "./pages/Trust";
+import SignedOut from "./SignedOut";
+import SlidingNav from "./SlidingNav";
+import { Toaster } from "./toasts";
 import { useRun } from "./useRun";
 
 type Page = "today" | "trust" | "audit" | "settings";
@@ -20,17 +25,40 @@ export const NAV: { id: Page; label: string }[] = [
 
 /** Auth gate: shows the login screen until /api/auth/me confirms a session; any later 401 sends you back here. */
 export default function App() {
+  useReducedMotionClass();
+  useRipple();
   const [user, setUser] = useState<AuthUser | null | undefined>(undefined); // undefined = checking
+  const [signedOut, setSignedOut] = useState(false);
+  const signingOut = useRef(false);
   useEffect(() => {
     authApi.me().then(setUser).catch(() => setUser(null));
-    return onUnauthorized(() => setUser(null));
+    // A poll that races the logout may get a 401 first; the sign-out flow handles that transition itself.
+    return onUnauthorized(() => { if (!signingOut.current) setUser(null); });
   }, []);
+
+  /**
+   * Ends the session on the server first. Only then is the UI cleared: if the request fails this rejects and the
+   * user stays signed in, because showing "signed out" while the cookie still works would be false.
+   */
+  const signOut = async () => {
+    signingOut.current = true;
+    try {
+      await authApi.logout();
+      resetEntrances();
+      setSignedOut(true);
+      setUser(null); // unmounts the shell, which discards every piece of client state it held
+    } finally {
+      signingOut.current = false;
+    }
+  };
+
+  if (signedOut) return <SignedOut onSignInAgain={() => setSignedOut(false)} />;
   if (user === undefined) return <Spinner label="Checking your session…" />;
   if (!user) return <Login onLoggedIn={setUser} />;
-  return <Shell user={user} onLoggedOut={() => setUser(null)} />;
+  return <Shell user={user} onSignOut={signOut} />;
 }
 
-function Shell({ user, onLoggedOut }: { user: AuthUser; onLoggedOut: () => void }) {
+function Shell({ user, onSignOut }: { user: AuthUser; onSignOut: () => Promise<void> }) {
   const [health, setHealth] = useState<Health | null>(null);
   const [offline, setOffline] = useState(false);
   const [page, setPage] = useState<Page>("today");
@@ -71,36 +99,27 @@ function Shell({ user, onLoggedOut }: { user: AuthUser; onLoggedOut: () => void 
     );
   }
 
-  const logout = () => void authApi.logout().catch(() => undefined).finally(onLoggedOut);
-
+  const navItems = NAV.map((t) => ({ ...t, badge: t.id === "today" && pending > 0 && page !== "today" ? `${pending} waiting for you` : undefined }));
   return (
     <div className="min-h-screen">
-      <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:left-2 focus:top-8 focus:z-[70] focus:rounded-lg focus:bg-white focus:px-3 focus:py-2">Skip to content</a>
+      <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:left-2 focus:top-8 focus:z-[70] focus:rounded-lg focus:bg-panel focus:px-3 focus:py-2">Skip to content</a>
       <Toaster />
       <ReplayBanner health={health} />
-      <header className="mx-auto flex max-w-2xl flex-wrap items-center justify-between gap-x-4 gap-y-3 px-4 pt-5">
-        <div className="flex items-center gap-2">
-          <Logo size={28} />
-          <span className="font-display text-lg font-semibold">Munshi</span>
-          <DataBadge mode={health?.mode} />
-        </div>
-        <nav className="flex w-full justify-between gap-1 sm:w-auto sm:justify-start" aria-label="Main">
-          {NAV.map((t) => (
-            <button
-              key={t.id}
-              onClick={() => setPage(t.id)}
-              aria-current={page === t.id ? "page" : undefined}
-              aria-label={t.id === "today" && pending > 0 && page !== "today" ? `Today, ${pending} waiting for you` : undefined}
-              className={`relative whitespace-nowrap rounded-full px-3 py-2 text-sm font-semibold sm:px-4 ${page === t.id ? "bg-white text-ink shadow-sm" : "text-soft hover:text-ink"}`}
-            >
-              {t.label}
-              {t.id === "today" && pending > 0 && page !== "today" && <span aria-hidden className="absolute right-1 top-1.5 h-2 w-2 rounded-full bg-warn" />}
-            </button>
-          ))}
-        </nav>
-      </header>
+      <div className="mx-auto max-w-[1100px] px-3 pt-3 sm:px-4">
+        <header className="panel relative z-30 flex flex-wrap items-center gap-x-4 gap-y-2 p-2 md:flex-nowrap md:px-3">
+          <div className="order-1 flex items-center gap-2 pl-1">
+            <Logo size={28} />
+            <span className="font-display text-lg font-semibold">Munshi</span>
+            <DataBadge mode={health?.mode} />
+          </div>
+          <SlidingNav items={navItems} current={page} onSelect={setPage} label="Main" tone="wash" className="order-3 w-full justify-between md:order-2 md:mx-auto md:w-auto md:justify-start md:gap-1" />
+          <div className="order-2 ml-auto md:order-3 md:ml-0">
+            <AccountMenu email={user.email} onSettings={() => setPage("settings")} onTrust={() => setPage("trust")} onSignOut={onSignOut} />
+          </div>
+        </header>
+      </div>
 
-      <main id="main" key={health?.mode} className="mx-auto max-w-2xl space-y-6 px-4 pb-24 pt-10">
+      <main id="main" key={health?.mode} className="mx-auto max-w-[1100px] space-y-4 px-3 pb-28 pt-4 sm:px-4">
         {offline && <Banner tone="red">Can't reach the Munshi server. Is <code>npm run dev:server</code> running?</Banner>}
         {health?.googleAuthProblem && health.mode === "google" && (
           <Banner tone="red">
@@ -114,7 +133,7 @@ function Shell({ user, onLoggedOut }: { user: AuthUser; onLoggedOut: () => void 
         )}
         {page === "trust" && <Trust actions={actions ?? []} mode={health?.mode} refresh={refresh} onEditRules={() => setPage("settings")} />}
         {page === "audit" && <AuditLog actions={actions ?? []} />}
-        {page === "settings" && <Settings health={health} offline={offline} email={user.email} onModeChange={() => void loadHealth()} onLogout={logout} />}
+        {page === "settings" && <Settings health={health} offline={offline} email={user.email} onModeChange={() => void loadHealth()} onSignOut={onSignOut} />}
       </main>
     </div>
   );

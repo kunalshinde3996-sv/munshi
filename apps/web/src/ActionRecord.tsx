@@ -77,7 +77,7 @@ export function ActionCard({ a, now, emails, time, onOpenEmail, children }: {
   const title = shortTitle(a, emails);
   const flag = shortFlag(a);
   return (
-    <article className="panel space-y-2 p-4">
+    <article className="card lift min-w-0 space-y-2 p-4">
       <h3 className="truncate font-medium" title={title}>{title}</h3>
       {flag && <p className="text-sm text-warn"><span aria-hidden>⚠ </span>{flag}</p>}
       <div className="flex flex-wrap items-center gap-2">
